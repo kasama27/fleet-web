@@ -1,0 +1,23 @@
+{
+  "dev8": {
+    "name": "dev8",
+    "collected": 0,
+    "generated": 0,
+    "posted": 0,
+    "daily": {
+      "date": "",
+      "count": 0
+    },
+    "postedDay": "",
+    "postedDayBase": 0,
+    "lastDone": 0,
+    "kw": "",
+    "searchMode": "",
+    "lastAction": "",
+    "lastRounds": 0,
+    "lastKwq": null,
+    "kwDone": [],
+    "liveKwq": null,
+    "stopCount": 0
+  }
+}

@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pondy Fleet</title>
+<style>
+  :root{
+    --bg:#0c0e12; --surface:#15181e; --surface2:#1c2027;
+    --line:#272b33; --line2:#363c46;
+    --text:#e7e9ee; --muted:#98a0ad; --faint:#646b78;
+    --accent:#6e6af6; --accent-hover:#7d79ff; --accent2:#9b98ff; --accent-soft:rgba(110,106,246,.14);
+    --ok:#35d39a; --ok-soft:rgba(53,211,154,.13);
+    --danger:#ef6d6d; --danger-soft:rgba(239,109,109,.13);
+    --warn:#e0a23a; --warn-soft:rgba(224,162,58,.13);
+    --r:10px; --r-lg:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+    background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;
+    font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  svg{display:block}
+  .wrap{max-width:1180px;margin:0 auto;
+    padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+
+  header{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:600;letter-spacing:.2px}
+  .logo .mark{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--accent-soft);color:var(--accent2)}
+  .logo .mark svg{width:16px;height:16px}
+  .logo b{font-weight:600}
+  .logo .tag{font-size:11px;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--line);padding:2px 7px;border-radius:6px;letter-spacing:.3px}
+  .pill{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .count{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;color:var(--muted)}
+  .count b{color:var(--ok);font-weight:600}
+  .ghost{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);background:transparent;color:var(--muted);
+    border-radius:var(--r);padding:0 13px;height:38px;cursor:pointer;font-size:13px;font-weight:500;text-decoration:none;font-family:inherit;transition:.15s}
+  .ghost:hover{color:var(--text);border-color:var(--line2);background:var(--surface2)}
+  .ghost svg{width:16px;height:16px}
+
+  .board{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:18px}
+  .board h3{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px;letter-spacing:.2px}
+  .board h3 svg{width:16px;height:16px;color:var(--accent2)}
+  .brow{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:none}
+  .rank{width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:7px;font-size:12px;font-weight:600;
+    background:var(--surface2);color:var(--muted)}
+  .brow:nth-child(1) .rank{background:var(--accent-soft);color:var(--accent2)}
+  .bnm{flex:1;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .blast{margin-left:8px;font-size:11.5px;opacity:.55}
+  .bbar{--c:var(--accent);position:relative;overflow:hidden;height:5px;border-radius:3px;margin-top:5px;min-width:2px;
+    background:color-mix(in srgb,var(--c) 32%,transparent);box-shadow:0 0 6px color-mix(in srgb,var(--c) 45%,transparent)}
+  .bbar::after{content:"";position:absolute;inset:0;border-radius:inherit;
+    background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--c) 55%,transparent) 35%,#fff 50%,color-mix(in srgb,var(--c) 55%,transparent) 65%,transparent 100%);
+    background-size:45% 100%;background-repeat:no-repeat;animation:neon 1.8s linear infinite}
+  .bbar.warn{--c:var(--warn)} .bbar.bad{--c:var(--danger)}
+  @keyframes neon{from{background-position:-45% 0}to{background-position:145% 0}}
+  @media (prefers-reduced-motion:reduce){.bbar::after{animation:none;background:var(--c);background-size:100% 100%}}
+  .bn{font-weight:600;color:var(--text);font-size:15px;width:34px;text-align:right;font-variant-numeric:tabular-nums}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px}
+  .dev{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;min-width:0;overflow:hidden;transition:border-color .15s}
+  .dev.on:hover{border-color:var(--line2)}
+  .dev.off{opacity:.55}
+  /* บังการ์ดเครื่องส่วนตัว — กันคนเดินผ่านเห็น ไม่ใช่ระบบความปลอดภัย (รหัสอยู่ในหน้านี้ เปิด source
+     ก็เห็น). ตัวที่กันการ "สั่งงาน" จริงคือด่าน pin ฝั่งเซิร์ฟเวอร์ ซึ่งเป็นคนละชั้นกัน */
+  /* บังการ์ดเครื่องส่วนตัว — ปิดทึบไปเลย ไม่ใช่ blur: blur ยังอ่านตัวเลขโต ๆ ออกถ้าเพ่ง และ
+     filter ไม่ทำงานบนเบราว์เซอร์เก่าบางตัว = ไม่บังอะไรเลยโดยไม่มีใครรู้
+     นี่คือการบังตา ไม่ใช่ระบบความปลอดภัย (รหัสอยู่ในหน้านี้ เปิด source ก็เห็น) —
+     ตัวที่กันการสั่งงานจริงคือด่าน pin ฝั่งเซิร์ฟเวอร์ ซึ่งเป็นคนละชั้น */
+  .dev.locked{position:relative;min-height:190px}
+  .dev.locked>*{visibility:hidden}
+  .dev.locked::after{
+    content:'🔒\A แตะเพื่อใส่รหัส';white-space:pre-line;text-align:center;line-height:1.9;
+    position:absolute;inset:0;display:grid;place-items:center;cursor:pointer;
+    font-size:15px;font-weight:600;color:var(--muted);
+    background:var(--surface);border-radius:var(--r-lg)}
+  .dev.locked:hover::after{color:var(--text)}
+  .top{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  /* ปุ่มไอคอนอยู่กลุ่มเดียวกันและไม่ยอมยุบ ชื่อจึงได้พื้นที่ที่เหลือทั้งหมด */
+  .hdr-icons{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto}
+  /* ป้ายสถานะย้ายมาบรรทัดของตัวเอง — เดิมมันเบียดชื่อจนเหลือ 2-3 ตัวอักษร */
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .pills:empty{display:none}
+  /* สถานะอัปเดตแอป — โผล่เฉพาะตอนมีอะไรเกิดขึ้น */
+  .updst{display:none;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;margin-bottom:10px;
+    background:rgba(240,160,32,.10);border:1px solid rgba(240,160,32,.28);color:#f0b050}
+  .updst.on{display:block}
+  .updst.done{background:rgba(60,200,120,.10);border-color:rgba(60,200,120,.28);color:#4fd98a}
+  .updst.err{background:rgba(240,80,80,.10);border-color:rgba(240,80,80,.3);color:#ff8a8a}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+  .dev.on .dot{background:var(--ok)}
+  .name{font-weight:600;font-size:16px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .name.unset{color:var(--faint);font-weight:400}
+  .icon-btn{display:grid;place-items:center;background:transparent;border:none;color:var(--faint);cursor:pointer;
+    width:30px;height:30px;border-radius:8px;flex:none;padding:0;transition:.15s}
+  .icon-btn:hover{color:var(--text);background:var(--surface2)}
+  .icon-btn.upd{color:#f0a020}
+  .icon-btn.upd:hover{background:rgba(240,160,32,.14)}
+  .icon-btn svg{width:16px;height:16px}
+
+  .tag-pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:7px;flex:none;letter-spacing:.2px}
+  .tag-pill svg{width:13px;height:13px}
+  .ver{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+  .ver.v2{background:var(--accent-soft);color:var(--accent2);border-color:transparent}
+  .ver.old{background:var(--danger-soft);color:var(--danger);border-color:rgba(239,109,109,.4)}
+  .ver.latest{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+  .a11y.ok{background:var(--ok-soft);color:var(--ok)} .a11y.bad{background:var(--danger-soft);color:var(--danger)}
+
+  .statusline{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+  .model{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;max-width:100%;font-size:12px;font-weight:500;padding:5px 11px;border-radius:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+  .s-idle{background:var(--surface2);color:var(--muted)}
+  .s-active{background:var(--accent-soft);color:var(--accent2)}
+  .s-active::before{animation:pulse 1.5s ease-in-out infinite}
+  .s-done{background:var(--ok-soft);color:var(--ok)}
+  .s-failed{background:var(--danger-soft);color:var(--danger)}
+  .s-login{background:var(--warn-soft);color:var(--warn)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .cnt{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--muted)}
+  .chip svg{width:14px;height:14px;color:var(--faint)}
+  .chip b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  .chip.g b{color:var(--ok)} .chip.o b{color:var(--accent2)}
+  /* คลัง = คลิปที่เจนแล้วแต่ยังไม่ได้โพส. กดได้ (เปิดรายชื่อสินค้า) เลยทำให้ดูเป็นปุ่ม; ซ่อนไปเลย
+     ถ้าเครื่องยังไม่รายงาน (แอปเก่า) จะได้ไม่โชว์ "คลัง 0" ค้างแบบโกหก */
+  .chip.stock{cursor:pointer} .chip.stock:hover{border-color:var(--accent2)}
+  .chip.stock b{color:var(--accent2)}
+  .reset{margin-left:auto;font-size:12px;color:var(--faint);background:none;border:1px solid var(--line);
+    border-radius:8px;padding:6px 11px;cursor:pointer;font-family:inherit;transition:.15s}
+  .reset:hover{color:var(--danger);border-color:rgba(239,109,109,.4)}
+
+  .meta{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.55;min-height:18px}
+  .meta b{color:var(--text);font-weight:600}
+  .mtag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:5px;background:var(--surface2);color:var(--muted);margin-right:5px}
+  .mtag.ok{background:var(--ok-soft);color:var(--ok)}
+  .mtag.bad{background:rgba(255,90,90,.15);color:#ff9d9d}
+  /* ป้ายกดได้: เอาคิวที่โดนล้างตอนกดหยุด/พัก กลับมา */
+  .mtag.restore{cursor:pointer;background:var(--accent-soft);color:var(--accent2);font-weight:600;border:1px solid rgba(255,255,255,.08)}
+  .mtag.restore:hover{filter:brightness(1.15)}
+  /* ป้ายคิวที่กดเปิดดูรายคำได้ + คำที่ยังไม่ได้ทำ (กด × ลบออกจากคิวทีละคำ) */
+  .mtag.mode{cursor:pointer;background:var(--accent-soft);color:var(--accent2);font-weight:600;border:1px solid rgba(255,255,255,.08)}
+  .mtag.mode:hover{filter:brightness(1.15)}
+  .mtag.kq{cursor:pointer}
+  .mtag.kq:hover{color:var(--text)}
+  .mtag.kqw{display:inline-flex;align-items:center;gap:3px;padding-right:2px;margin-bottom:4px}
+  .mtag.kqw.clr{cursor:pointer;color:#ff9d9d}
+  .mtag.kqw.clr:hover{background:var(--danger-soft)}
+  .mtag .x{font-style:normal;color:var(--faint);cursor:pointer;padding:0 4px;border-radius:4px}
+  .mtag .x:hover{color:var(--danger);background:var(--danger-soft)}
+  .mtag.post{background:var(--accent-soft);color:var(--accent2);font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-bottom:5px}
+  .mtag.post svg{width:12px;height:12px}
+  .err{display:flex;align-items:center;gap:6px;color:var(--danger);margin-top:6px;font-size:12px}
+  .err svg{width:14px;height:14px;flex:none}
+
+  input,select{background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:var(--r);padding:9px 11px;font-size:14px;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  input::placeholder{color:var(--faint)}
+
+  .ctl{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:11px}
+  .kw-wrap{position:relative}
+  .kw-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--faint);pointer-events:none}
+  .ctl input.kw{width:100%;font-size:16px;padding:13px 14px 13px 40px;border-radius:12px}
+  .kwrow{display:flex;gap:9px;align-items:stretch;flex-wrap:wrap}
+  .kwrow .kw-wrap{flex:1 1 170px;min-width:170px}
+  .kwrow .mode-sel{flex:none;width:104px;text-align:center;border-radius:12px;font-size:15px;padding:13px 8px}
+  /* ปุ่ม "+คิว" — โผล่เฉพาะตอนเครื่องกำลังรัน (ตอนไม่รันใช้ปุ่มสร้างคลิปปกติ) */
+  .kwadd{flex:1 1 auto;display:none;align-items:center;justify-content:center;gap:5px;padding:13px 12px;border-radius:12px;
+    border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);font-family:inherit;font-size:14px;
+    font-weight:600;cursor:pointer;white-space:nowrap}
+  .kwadd:disabled{opacity:.5;cursor:default}
+  .dev.running .kwadd{display:inline-flex}
+  /* ปุ่ม "บันทึกคำ" + คลังคำที่บันทึกไว้ — คลังอยู่บนเซิร์ฟเวอร์ ใครบันทึก/ลบ ทุกเบราว์เซอร์เห็นตรงกัน */
+  .kwsave{flex:none;display:inline-flex;align-items:center;justify-content:center;padding:13px 12px;border-radius:12px;
+    border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-family:inherit;font-size:14px;
+    cursor:pointer;white-space:nowrap}
+  .kwsave:hover{color:var(--text);border-color:var(--line2)}
+  .kwlib{display:none;flex-direction:column;gap:7px}
+  .kwlib.has{display:flex}
+  .kwlib-head{align-self:flex-start;background:none;border:none;padding:0;color:var(--muted);font-family:inherit;
+    font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+  .kwlib-head:hover{color:var(--text)}
+  .kwlib-head .n{font-variant-numeric:tabular-nums}
+  .kwlib-body{display:none;flex-wrap:wrap;gap:6px;max-height:190px;overflow-y:auto}
+  .kwlib.open .kwlib-body{display:flex}
+  .kwchip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--line);
+    border-radius:8px;padding:5px 5px 5px 9px;font-size:12.5px;color:var(--text);cursor:pointer;max-width:100%}
+  .kwchip:hover{border-color:var(--accent)}
+  .kwchip .md{font-size:10.5px;color:var(--faint)}
+  /* ปุ่มสลับ "คำของเครื่องนี้ / ทุกเครื่อง" — เป็น chip ท้ายลิสต์ ไม่ใช่คำจริง เลยทำให้จางกว่า */
+  .kwchip.lib-all{background:none;border-style:dashed;color:var(--muted)}
+  .kwchip.lib-all:hover{color:var(--text)}
+  .kwchip .x{font-style:normal;color:var(--faint);padding:0 5px;border-radius:5px;line-height:1.3}
+  .kwchip .x:hover{color:var(--danger);background:var(--danger-soft)}
+  .opts{display:grid;grid-template-columns:1.4fr 1fr;gap:9px}
+  .fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .fld>span{font-size:11.5px;color:var(--muted);padding-left:2px;font-weight:500}
+  .fld select,.fld input.num{width:100%;min-width:0;font-size:16px;padding:11px 8px;text-align:center;border-radius:10px;min-height:46px}
+  .fld input.num{appearance:textfield;-moz-appearance:textfield}
+
+  .acts{display:flex;flex-direction:column;gap:9px}
+  .acts-row{display:grid;gap:9px}
+  .acts-row.main{grid-template-columns:1fr 1fr}
+  .acts-row.ctl3{grid-template-columns:repeat(3,1fr)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:11px;
+    padding:0 12px;min-height:48px;font-size:14px;font-weight:500;cursor:pointer;color:var(--text);background:transparent;
+    font-family:inherit;line-height:1.2;text-align:center;transition:background .15s,border-color .15s,color .15s}
+  .btn svg{width:17px;height:17px;flex:none}
+  .btn:active{transform:translateY(.5px)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;filter:grayscale(.5)}
+  .btn--primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn--primary:hover{background:var(--accent-hover)}
+  .btn--tonal{background:var(--accent-soft);color:var(--accent2)}
+  .btn--tonal:hover{background:rgba(110,106,246,.24)}
+  .btn--ghost{border-color:var(--line);color:var(--muted)}
+  .btn--ghost:hover{background:var(--surface2);color:var(--text);border-color:var(--line2)}
+  .btn--danger{border-color:var(--line);color:var(--muted)}
+  .btn--danger:hover{background:var(--danger-soft);color:var(--danger);border-color:rgba(239,109,109,.4)}
+  .acts-row.ctl3 .btn{min-height:42px;font-size:13px}
+
+  .empty{color:var(--muted);text-align:center;padding:64px 0;font-size:14px}
+
+  /* แผงบัญชี (พับได้) — ดูราย acc + สลับ/โพสเอง */
+  .accwrap{border:1px solid var(--line);border-radius:11px;background:var(--surface2);overflow:hidden}
+  .acc-head{display:flex;align-items:center;gap:8px;width:100%;padding:11px 12px;background:none;border:none;color:var(--text);font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;text-align:left}
+  .acc-head .chev{width:11px;height:11px;color:var(--faint);transition:transform .18s;flex:none}
+  .accwrap.open .acc-head .chev{transform:rotate(90deg)}
+  .acc-head .sum{flex:1;text-align:right;padding-right:2px;font-weight:500;font-size:12px;color:var(--muted);white-space:nowrap}
+  .acc-head .sum b{color:var(--ok);font-weight:700;font-variant-numeric:tabular-nums}
+  .acc-head .sum.full{color:var(--danger)}
+  .acc-head .sum.full b{color:var(--danger)}
+  .acc-body{display:none;border-top:1px solid var(--line);padding:6px 10px 11px}
+  .accwrap.open .acc-body{display:block}
+  .acc-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+  .acc-row:last-of-type{border-bottom:none}
+  .acc-mark{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+  .acc-row.active .acc-mark{background:var(--ok)}
+  .acc-info{flex:1;min-width:0}
+  .acc-nm{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acc-nm .num{color:var(--accent2);margin-right:5px}
+  .acc-nm .noname{color:var(--faint);font-weight:400}
+  .acc-stats{display:flex;gap:12px;font-size:12px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+  .acc-stats b{color:var(--text);font-weight:600}
+  .acc-stats .full{color:var(--danger)} .acc-stats .full b{color:var(--danger)}
+  .acc-act{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+  /* ปุ่ม/ป้าย "บัญชีที่ใช้เก็บสินค้า" — โทนต่างจากปุ่มสลับบัญชีโพส จะได้ไม่กดสลับผิดตัว */
+  .acc-web{font-size:11.5px;font-weight:500;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:7px;padding:4px 9px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .acc-web:hover{color:var(--text);border-color:var(--faint)}
+  .acc-web.cur{color:var(--ok);background:var(--ok-soft);border-color:transparent;font-weight:600;cursor:default}
+  .acc-row.webon .acc-mark{box-shadow:0 0 0 2px var(--ok-soft)}
+  .acc-cur{font-size:11.5px;font-weight:600;color:var(--ok);background:var(--ok-soft);padding:5px 10px;border-radius:7px}
+  .acc-fulllbl{font-size:11.5px;font-weight:500;color:var(--faint);padding:5px 4px}
+  .acc-switch{font-size:12px;font-weight:500;color:var(--accent2);background:var(--accent-soft);border:none;border-radius:8px;padding:7px 12px;cursor:pointer;font-family:inherit}
+  .acc-switch:hover{background:rgba(110,106,246,.24)}
+  .acc-switch--full{background:var(--surface2);color:var(--muted);border:1px solid var(--line);font-size:11.5px;padding:5px 9px}
+  .acc-switch--full:hover{color:var(--text);background:var(--surface2);border-color:var(--line2)}
+  .postself{display:flex;align-items:center;gap:8px;margin-top:11px}
+  .postself .btn{flex:1;min-height:44px;font-size:13.5px}
+  .postself .btn--post{background:var(--accent-soft);color:var(--accent2)}
+  .postself input.num{width:64px;text-align:center;min-height:44px;font-size:15px;appearance:textfield;-moz-appearance:textfield}
+  .postself .lbl{font-size:12px;color:var(--muted)}
+
+  /* แถบราคาวิ่งล่างจอ (ticker) */
+  .ticker{position:fixed;left:0;right:0;bottom:0;height:38px;z-index:60;
+    background:var(--surface);border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}
+  .tk-cap{flex:none;display:flex;align-items:center;gap:7px;height:100%;padding:0 14px;
+    background:var(--surface2);border-right:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.4px}
+  .tk-cap .live{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+  .tk-view{flex:1;overflow:hidden}
+  .tk-track{display:inline-flex;align-items:center;white-space:nowrap;will-change:transform;animation:tkscroll 60s linear infinite}
+  .ticker:hover .tk-track{animation-play-state:paused}
+  .tk-close{flex:none;display:grid;place-items:center;width:38px;height:100%;border:none;border-left:1px solid var(--line);
+    background:var(--surface2);color:var(--muted);cursor:pointer;padding:0}
+  .tk-close:hover{color:var(--text)}
+  .tk-close svg{width:15px;height:15px}
+  body.no-ticker .ticker{display:none}
+  body.no-ticker .wrap{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .tk-item{display:inline-flex;align-items:baseline;gap:7px;padding:0 5px;font-size:13px;font-variant-numeric:tabular-nums}
+  .tk-sym{color:var(--muted);font-weight:600;letter-spacing:.2px}
+  .tk-px{color:var(--text);font-weight:500}
+  .tk-ch{font-weight:600;font-size:11.5px}
+  .tk-ch.up{color:var(--ok)} .tk-ch.down{color:var(--danger)}
+  .tk-dot{color:var(--line2);padding:0 16px}
+  .tk-item.hot-up,.tk-item.hot-down{border-radius:7px;padding:2px 9px;margin:0 2px;animation:hotpulse 1.3s ease-in-out infinite}
+  .tk-item.hot-up{background:var(--ok-soft);color:var(--ok)}
+  .tk-item.hot-up .tk-sym,.tk-item.hot-up .tk-px,.tk-item.hot-up .tk-ch{color:var(--ok)}
+  .tk-item.hot-down{background:var(--danger-soft);color:var(--danger)}
+  .tk-item.hot-down .tk-sym,.tk-item.hot-down .tk-px,.tk-item.hot-down .tk-ch{color:var(--danger)}
+  .tk-flame{width:12px;height:12px;animation:flicker .55s ease-in-out infinite alternate}
+  .tk-hot{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+  @keyframes hotpulse{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 13px -3px currentColor}}
+  @keyframes flicker{from{opacity:.55;transform:scale(.85)}to{opacity:1;transform:scale(1.12)}}
+  @keyframes tkscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* พื้นหลัง toggle */
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .wrap{position:relative;z-index:1}
+
+  @media (max-width:380px){ .btn{font-size:14.5px} .acts-row.main .btn{min-height:50px} }
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div class="wrap">
+  <header>
+    <span class="logo">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></span>
+      PONDY <b>FLEET</b><span class="tag">v2</span>
+    </span>
+    <div class="pill">
+      <span class="count">ออนไลน์ <b id="onCount">0</b> / <span id="allCount">0</span></span>
+      <button class="ghost" id="fxBtn" onclick="cycleFx()" title="พื้นหลัง" aria-label="สลับพื้นหลัง">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </button>
+      <button class="ghost" id="tkBtn" onclick="setTickerOn(true)" title="เปิดแถบราคา" aria-label="เปิดแถบราคา" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+      </button>
+      <a class="ghost" href="/fleet/logout">ออกระบบ</a>
+    </div>
+  </header>
+
+  <div class="board" id="board" style="display:none">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.7V17c0 .8-.7 1.2-1.3 1.5C7.8 19 7 20.2 7 22"/><path d="M14 14.7V17c0 .8.7 1.2 1.3 1.5C16.2 19 17 20.2 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0z"/></svg>อันดับคลิปวันนี้</h3>
+    <div id="boardRows"></div>
+  </div>
+
+  <div class="board" id="affBoard" style="display:none">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></svg>ยอด Affiliate<span class="aff-month" id="affMonth"></span></h3>
+    <div class="aff-head" id="affHead"></div>
+    <div class="aff-note" id="affNote"></div>
+    <div class="aff-tiles" id="affTiles"></div>
+    <div class="aff-row" id="affMid"></div>
+    <div class="aff-row" id="affDev"></div>
+    <div class="aff-main"><h4>รายบัญชี · เรียงตามค่าคอมเดือนนี้ · กดแถวเพื่อดูยอดรายวัน</h4><div class="aff-scroll"><table class="aff-tbl" id="affTbl"></table></div></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">ยังไม่มีเครื่องเชื่อมต่อ — เปิดแอปบนมือถือ เครื่องจะโผล่เองที่นี่</div>
+</div>
+
+<div class="ticker" id="ticker">
+  <div class="tk-cap" aria-hidden="true"><span class="live"></span>ตลาด</div>
+  <div class="tk-view" aria-hidden="true"><div class="tk-track" id="tkTrack"></div></div>
+  <button class="tk-close" onclick="setTickerOn(false)" title="ปิดแถบราคา" aria-label="ปิดแถบราคา">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+</div>
+
+<script>
+const SVG=(p,fill)=>`<svg viewBox="0 0 24 24" fill="${fill?'currentColor':'none'}" stroke="${fill?'none':'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ic={
+  dl:SVG('<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>'),
+  eye:SVG('<path d="M1.8 12S5.5 5 12 5s10.2 7 10.2 7-3.7 7-10.2 7S1.8 12 1.8 12z"/><circle cx="12" cy="12" r="3"/>'),
+  film:SVG('<rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="M7 4.5v15M17 4.5v15M2.5 9.5h4.5M2.5 14.5h4.5M17 9.5h4.5M17 14.5h4.5"/>'),
+  bag:SVG('<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>'),
+  pause:SVG('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',1),
+  play:SVG('<path d="M7 4.5 19 12 7 19.5z"/>',1),
+  stop:SVG('<rect x="6" y="6" width="12" height="12" rx="2"/>',1),
+  pkg:SVG('<path d="M21 8v12H3V8"/><path d="M1.5 3.5h21v5h-21z"/><path d="M10 12h4"/>'),
+  cal:SVG('<rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/>'),
+  shieldOk:SVG('<path d="M12 21s7-3.5 7-9V5l-7-2.5L5 5v7c0 5.5 7 9 7 9z"/><path d="M9 12l2 2 4-4"/>'),
+  shieldNo:SVG('<path d="M12 21s7-3.5 7-9V5l-7-2.5L5 5v7c0 5.5 7 9 7 9z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/>'),
+  pencil:SVG('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+  search:SVG('<circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.3-4.3"/>'),
+  alert:SVG('<path d="M12 3 2 20h20z"/><path d="M12 10v5M12 18h.01"/>'),
+};
+const ACTIVE=['CREATED','EXTRACTING','STAGED','QUEUED','FLOW_UPLOADING','IMAGE_GENERATING','AWAITING_PAID_CONFIRM','VIDEO_GENERATING','DOWNLOADING'];
+const badgeClass=s=>s==='DONE'?'s-done':s==='FAILED'?'s-failed':s==='NEEDS_LOGIN'?'s-login':ACTIVE.includes(s)?'s-active':'s-idle';
+const STATE_TH={
+  IDLE:'ว่าง', CREATED:'เริ่มงาน', EXTRACTING:'กำลังดึงข้อมูล', STAGED:'เตรียมพร้อม',
+  QUEUED:'เข้าคิว', FLOW_UPLOADING:'กำลังอัปโหลด', IMAGE_GENERATING:'กำลังสร้างรูป',
+  AWAITING_PAID_CONFIRM:'รอยืนยันจ่าย', VIDEO_GENERATING:'กำลังสร้างคลิป', DOWNLOADING:'กำลังดาวน์โหลด',
+  DONE:'เสร็จแล้ว', FAILED:'ผิดพลาด', NEEDS_LOGIN:'ต้องล็อกอินใหม่'
+};
+const stateLabel=s=>STATE_TH[s]||s;
+const ago=t=>{if(!t)return'—';const s=Math.floor((Date.now()-t)/1000);return s<60?s+'s':s<3600?Math.floor(s/60)+'m':Math.floor(s/3600)+'h';};
+const esc=x=>(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let ws,devices=[],maxAppVer=0,apkBuild=0;   // apkBuild = build ของ APK ที่เซิร์ฟเวอร์มีให้อัปเดต
+// Git commit count parsed from appVerName ("#35 416cabd · 29/06 17:23") — the "how new is the code"
+// number. Old date-scheme builds send no appVerName → 0. Used to rank ล่าสุด/แอปเก่า.
+function buildNo(s){const m=/#(\d+)/.exec(s||'');return m?+m[1]:0;}
+// Flow (whisk) version "1.478.0" → เลขเทียบได้; ใช้หา Flow เก่าสุดเทียบฝูง (selector พังตามเวอร์ชัน Flow)
+function flowNo(s){const p=String(s||'').split('.');return (parseInt(p[0],10)||0)*1e6+(parseInt(p[1],10)||0)*1e3+(parseInt(p[2],10)||0);}
+let maxFlowVer=0;
+function connect(){
+  ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/fleet/ws');
+  ws.onmessage=e=>{const m=JSON.parse(e.data);
+    if(m.type==='devices'){devices=m.devices;apkBuild=m.apkBuild||0;render();renderRot();renderSelectors();renderAff();}
+    else if(m.type==='aff'){affAccounts=m.accounts||{};affDevs=m.devs||{};affProducts=m.products||null;renderAff();}
+    else if(m.type==='affstatsack'){onAffAck(m);}
+    else if(m.type==='templates'){tplStore=m.templates||{};renderTplSel();}
+    else if(m.type==='locked'){sessionStorage.removeItem('pondyPin');alert('รหัสไม่ถูก — คำสั่งไม่ถูกส่ง');render();}
+    else if(m.type==='shot'){onShot(m);}
+    else if(m.type==='updatestat'){onUpdateStat(m);}
+    else if(m.type==='settings'||m.type==='settingsack'||m.type==='settingserr'){onCfgMsg(m);}
+    else if(m.type==='kwaddack'){
+      // เซิร์ฟเดาโหมดงานที่รันอยู่ไม่ได้ (แอปเก่า + งานที่เริ่มก่อนเปิดฟีเจอร์) → ถามเจ้าของเครื่องเอาตรง ๆ
+      // ครั้งเดียวพอ หลังจากนี้เซิร์ฟจำไว้ให้แล้ว
+      if(m.reason==='noaction'){
+        const post=confirm('เครื่องนี้เริ่มงานไว้ก่อนหน้า ระบบยังไม่รู้ว่ากำลังทำโหมดไหน\n\n'+
+          'คำที่เพิ่งเพิ่ม พอถึงคิวแล้วให้ทำแบบไหน?\n\n'+
+          'ตกลง = สร้างคลิป + โพส\nยกเลิก = สร้างคลิปอย่างเดียว');
+        send({type:'kwadd',deviceId:m.deviceId,keywords:splitKw((document.getElementById('kw-'+m.deviceId)||{}).value),
+          searchMode:(document.getElementById('mo-'+m.deviceId)||{}).value||'PRODUCT',
+          assume:post?'looppost':'loop'});
+        return;
+      }
+      const left=m.left||[];
+      const why={offline:'เครื่องออฟไลน์',empty:'พิมพ์คีย์เวิร์ดก่อน',dup:'คำนี้อยู่ในคิวแล้ว',
+        notrunning:'เครื่องไม่ได้รันอยู่ — กดสร้างคลิปได้เลย',
+        full:`คิวเต็ม ${m.list.length} คำ — ลบคำในคิวก่อน`};
+      kwAddNote(m.deviceId, m.ok
+        ? `✓ +${m.added} คำ (คิว ${m.list.length})`+(left.length?` · เต็ม เหลือ ${left.length} คำในช่อง`:'')
+        : (why[m.reason]||'ต่อคิวไม่สำเร็จ'));
+      // ต่อคิวสำเร็จ = คำย้ายไปอยู่ในคิวแล้ว ล้างช่องให้พิมพ์คำถัดไปต่อได้เลย (คิวดูที่ป้ายบนการ์ด)
+      // คำที่ยัดไม่ลงเพราะคิวเต็ม ค้างไว้ในช่องตามเดิม — เมื่อก่อนโดนล้างทิ้งไปเงียบ ๆ
+      if(m.ok){const el=document.getElementById('kw-'+m.deviceId);if(el)el.value=left.join(', ');}
+    }
+    else if(m.type==='kwqrestoreack'){
+      // ปุ่มกู้คิวอยู่ในแถบ meta ที่ถูก render ทับทุก broadcast → เขียนข้อความตอบไว้ที่ปุ่ม + คิว แทน
+      const why={offline:'เครื่องออฟไลน์',nokwq:'ไม่มีคิวเดิมให้กู้',
+        alldone:'คำในคิวเดิมหมดสต็อกไปแล้วทั้งหมด',dup:'คำเหล่านี้อยู่ในคิวแล้ว'};
+      const act=ACT_TH[m.action]||'';
+      kwAddNote(m.deviceId, m.ok&&!m.reason ? `✓ กู้คิว ${m.list.length} คำ`+(act?` · ${act}`:'') : (why[m.reason]||'กู้คิวไม่สำเร็จ'));
+    }
+    else if(m.type==='kwqmodeack'){
+      const why={badmode:'โหมดไม่ถูกต้อง',offline:'เครื่องออฟไลน์',same:'เป็นโหมดนี้อยู่แล้ว'};
+      kwAddNote(m.deviceId, m.ok
+        ? '✓ '+(ACT_TH[m.action]||m.action)+(m.reason==='started'?' — เริ่มให้แล้ว':' — กำลังหยุดเพื่อเริ่มคำเดิมใหม่')
+        : (why[m.reason]||'สลับโหมดไม่สำเร็จ'));
+    }
+    else if(m.type==='kwqdelack'){
+      const why={nokwq:'ไม่มีคิวให้ลบ',nothing:'ไม่มีคำที่ยังไม่ได้ทำ',
+        running:'ลบคำที่กำลังทำอยู่ไม่ได้ — กดหยุดแทน',moved:'คิวเพิ่งเลื่อนไปคำถัดไป ลองใหม่'};
+      kwAddNote(m.deviceId, m.ok ? `✓ ลบ ${m.n} คำออกจากคิว` : (why[m.reason]||'ลบไม่สำเร็จ'));
+    }
+    else if(m.type==='keywords'){kwLib=m.list||[];renderKwLib();}
+    else if(m.type==='kwsaveack'){
+      const why={empty:'พิมพ์คีย์เวิร์ดก่อน',dup:'บันทึกไว้แล้ว'};
+      kwSaveNote(m.deviceId, m.ok?`✓ บันทึก ${m.added} คำ`:(why[m.reason]||'บันทึกไม่สำเร็จ'));
+    }
+    else if(m.type==='selectorpresets'){selPresets=m.presets||{};renderSelectors();}
+    else if(m.type==='selectorsack'&&m.deviceId===cfgDev){cfgNote('ok','✓ เครื่องรับ selector แล้ว — ลองรอบถัดไปได้เลย');}
+    else if(m.type==='selectorserr'){cfgNote('err',m.error==='nover'?'เครื่องนี้แอปเก่า (ver<4) ยังไม่รองรับ':m.error==='offline'?'เครื่องออฟไลน์':'ส่งไม่สำเร็จ');}
+  };
+  ws.onclose=()=>setTimeout(connect,2000);
+}
+// ชื่อไทยของคำสั่งงานที่คิวคีย์เวิร์ดใช้ได้ (ตรงกับ KWQ_ACTIONS ฝั่งเซิร์ฟ + ป้ายบนปุ่มการ์ด)
+const ACT_TH={loop:'สร้างคลิป',looppost:'สร้างคลิป+โพส',collect:'เก็บ',run:'รัน',generate:'เจน'};
+const LOCKED_DEVICE='98f270a08b653e05';
+const LOCK_PIN='2580';
+const lockPin=()=>sessionStorage.getItem('pondyPin')||'';
+const unlocked=()=>lockPin()===LOCK_PIN;
+const send=o=>{
+  if(!(ws&&ws.readyState===1))return;
+  // เซิร์ฟเวอร์ปฏิเสธคำสั่งที่ยิงไปเครื่องนี้ (และ 'all' ซึ่งรวมเครื่องนี้) ถ้า pin ไม่มาด้วย
+  if(o&&(o.deviceId===LOCKED_DEVICE||o.deviceId==='all')){
+    let pin=lockPin();
+    if(!pin){pin=prompt('เครื่องนี้ล็อกไว้ — ใส่รหัสเพื่อสั่งงาน')||'';if(pin)sessionStorage.setItem('pondyPin',pin);}
+    if(!pin)return;
+    o={...o,pin};
+  }
+  ws.send(JSON.stringify(o));
+};
+// แตะการ์ดที่เบลอเพื่อใส่รหัส — ดักที่ document เพราะ render() สร้างการ์ดใหม่ได้ตลอด
+document.addEventListener('click',e=>{
+  const card=e.target.closest&&e.target.closest('.dev.locked');
+  if(!card)return;
+  const p=prompt('ใส่รหัสเพื่อดูการ์ดเครื่องนี้');
+  if(p===null)return;
+  sessionStorage.setItem('pondyPin',p);
+  if(p===LOCK_PIN)render();else alert('รหัสไม่ถูก');
+});
+// "ครีม, ลิปสติก; น้ำหอม" → ['ครีม','ลิปสติก','น้ำหอม'] — เว้นวรรคอยู่ในคำได้ (คั่นด้วย , ; เท่านั้น)
+function splitKw(s){const o=[],seen={};for(const k of String(s||'').split(/[,;\n]/)){const t=k.trim();if(t&&!seen[t]){seen[t]=1;o.push(t);}}return o.slice(0,20);}
+function cmd(id,action){
+  const kws=splitKw((document.getElementById('kw-'+id)||{}).value);
+  send({type:'cmd',deviceId:id,action,
+    keywords:kws,
+    keyword:kws[0]||'',                       // เผื่อเซิร์ฟรุ่นเก่าที่ยังไม่รู้จัก keywords
+    rounds:(document.getElementById('rd-'+id)||{}).value||1,
+    searchMode:(document.getElementById('mo-'+id)||{}).value||'PRODUCT'});
+}
+// เอาคิวที่โดนล้างตอนกดหยุด/พัก กลับมา — เซิร์ฟเก็บคำ+โหมดรายคำไว้ให้ใน devices.json
+// เครื่องว่างอยู่ = เซิร์ฟยิงคำแรกให้เลย (เท่ากับกดสั่งงานใหม่), กำลังรันอยู่ = ต่อท้ายคิว
+function kwqRestore(id){ send({type:'kwqrestore',deviceId:id}); }
+// การ์ดไหนกางรายคำในคิวอยู่ — แถบ meta ถูกวาดทับทุก broadcast เลยเก็บสถานะไว้นอก DOM
+const kqOpen={};
+function toggleKq(id){kqOpen[id]=!kqOpen[id];const d=devices.find(x=>x.deviceId===id);if(d)patch(d);}
+// ลบคำในคิว: i>=0 = ทีละคำ (ส่งคำที่เห็นไปด้วย เซิร์ฟจะไม่ลบถ้าคิวขยับไปแล้ว), i<0 = ล้างคำที่ยังไม่ได้ทำ
+function kwqMode(id,action){
+  var lines=[
+    'สลับเป็น "'+(ACT_TH[action]||action)+'" ?','',
+    'คิวคีย์เวิร์ดไม่หาย แต่เครื่องจะหยุดงานที่ทำค้างอยู่ แล้วเริ่มคำเดิมใหม่ด้วยโหมดใหม่',
+    '(คลิปที่ทำค้างอยู่เสียไป 1 ตัว)'];
+  if(!confirm(lines.join(String.fromCharCode(10))))return;
+  send({type:'kwqmode',deviceId:id,action});
+}
+function kwqDel(ev,id,i){
+  ev.stopPropagation();                            // อย่าให้ทะลุไปโดน onclick ของป้ายคิว (พับ/กาง)
+  if(i<0){
+    if(!confirm('ล้างคำที่ยังไม่ได้ทำออกจากคิวทั้งหมด?\n\n'+
+      'คำที่เครื่องกำลังทำอยู่ตอนนี้ไม่โดน (จะเลิกทำคำนั้นต้องกดหยุด)\n'+
+      'คำที่ลบไม่ได้ถูกเก็บไว้ที่ปุ่ม ↺ — พิมพ์ใหม่แล้วกด "+ คิว" ถ้าอยากได้กลับ'))return;
+    send({type:'kwqdel',deviceId:id,all:true});
+    return;
+  }
+  send({type:'kwqdel',deviceId:id,i,w:ev.target.dataset.w||''});
+}
+function kwqForget(ev,id){
+  ev.stopPropagation();                            // อย่าให้ทะลุไปโดน onclick ของป้าย ↺ (= กู้คิวเลย)
+  if(!confirm('ทิ้งคิวเดิมที่เก็บไว้ ไม่ต้องกู้แล้ว?\n\nป้าย ↺ จะหายไปจากการ์ดนี้'))return;
+  send({type:'kwqforget',deviceId:id});
+}
+// เพิ่มคำเข้าคิวระหว่างเครื่องกำลังรัน — ไม่ต้องกดหยุด. เซิร์ฟต่อท้ายคิวให้ ไม่แตะงานที่วิ่งอยู่
+function kwAdd(id){
+  const kws=splitKw((document.getElementById('kw-'+id)||{}).value);
+  if(!kws.length){kwAddNote(id,'พิมพ์คีย์เวิร์ดก่อน');return;}
+  clearTimeout(kwSaveT[id]);                      // กัน kwtext ที่ค้างอยู่มาทับ kw ที่เซิร์ฟเพิ่งอัปเดต
+  // โหมด สินค้า/ร้าน ที่เลือกอยู่ "ตอนกด" ติดไปกับคำพวกนี้ตลอด — คิวเดียวปนสองโหมดได้
+  send({type:'kwadd',deviceId:id,keywords:kws,
+    searchMode:(document.getElementById('mo-'+id)||{}).value||'PRODUCT'});
+}
+// ป้ายบนปุ่มบอกว่าคำที่กำลังจะเพิ่มจะไปเป็นโหมดไหน (ตาม dropdown ตอนนั้น)
+function kwAddLabel(id){
+  const b=document.getElementById('ka-'+id); if(!b||b.dataset.busy)return;
+  const shop=((document.getElementById('mo-'+id)||{}).value==='SHOP');
+  b.textContent=shop?'+ คิว ร้าน':'+ คิว สินค้า';
+}
+// ข้อความตอบกลับสั้น ๆ บนปุ่ม (2 วิ) — ไม่มีระบบ toast กลางในหน้านี้
+const kwNoteT={};
+function kwAddNote(id,msg){
+  const b=document.getElementById('ka-'+id); if(!b)return;
+  b.dataset.busy='1'; b.textContent=msg;
+  clearTimeout(kwNoteT[id]);
+  kwNoteT[id]=setTimeout(()=>{delete b.dataset.busy;kwAddLabel(id);},2500);
+}
+// สลับมาบัญชีนี้ (ทีละตัว) + โพสเอง — เฉพาะการ์ด v2
+function switchAcc(id,acc){ send({type:'cmd',deviceId:id,action:'switchaccount',account:acc}); }
+function switchAccFull(id,acc,name){
+  if(!confirm(`บัญชี ${name||acc} โพสต์ครบวันแล้ว\n\nสลับไปเพื่อดึงยอด Affiliate เท่านั้น — ลงคลิปเพิ่มด้วยบัญชีนี้ไม่ได้จนถึงพรุ่งนี้\n(ดึงยอดเสร็จแล้วสลับกลับไปบัญชีที่ยังลงได้ด้วย)\n\nสลับเลยไหม?`))return;
+  switchAcc(id,acc);
+}
+// สลับ "บัญชีที่ใช้เก็บสินค้า" (web session / cookie jar) — คนละตัวกับบัญชีโพส.
+// ต้องถามยืนยันเพราะแอปจะฆ่าตัวเองแล้วเปิดใหม่ (cookie jar เลือกได้ครั้งเดียวตอนบูต) และบัญชีปลายทาง
+// ต้อง login Shopee ค้างไว้ในเครื่องแล้ว ไม่งั้นเก็บไม่ได้เหมือนเดิม (แอปเช็คแค่ว่ามีชื่อผู้ใช้)
+function switchWebAcc(id,acc){
+  if(!confirm('สลับบัญชีที่ใช้ "เก็บสินค้า" ไปเป็นบัญชี '+acc+' ?\n\n'+
+    '⚠ แอปจะปิดตัวเอง และเครื่อง Xiaomi มักไม่เปิดกลับมาเอง\n'+
+    '   → ต้องมีคนไปแตะเปิดแอปที่เครื่องนั้น เครื่องถึงจะกลับมา online\n'+
+    '   อย่ากดถ้าไม่มีคนอยู่กับเครื่อง\n\n'+
+    '• งานที่รันอยู่จะหยุด — คิวคีย์เวิร์ดถูกเก็บไว้ให้กด "เอาคิวเดิมกลับมา"\n'+
+    '• บัญชี '+acc+' ต้อง login Shopee ค้างไว้ในเครื่องนั้นแล้ว ไม่งั้นก็เก็บไม่ได้เหมือนเดิม'))return;
+  send({type:'cmd',deviceId:id,action:'switchwebaccount',account:acc});
+}
+function postSelf(id){ const n=(document.getElementById('pc-'+id)||{}).value||5; send({type:'cmd',deviceId:id,action:'post',count:n}); }
+// วาดแผงบัญชี (สรุป พร้อม X/3 + รายแถว); เต็มวัน = ไม่มีปุ่มสลับ
+// วาดใหม่เฉพาะตอน HTML เปลี่ยนจริง — assign innerHTML ซ้ำด้วยค่าเดิมก็ยังทำลาย DOM ทิ้ง
+// = ติ๊ก/โฟกัส/ค่าที่พิมพ์ค้างไว้หายทุก broadcast (heartbeat ทุก 20 วิ) และอนิเมชันเริ่มใหม่
+// จนดูเหมือนหน้าเว็บรีเฟรชทั้งหน้า
+function setHTML(el,html){if(!el||el.dataset.h===html)return false;el.dataset.h=html;el.innerHTML=html;return true;}
+function renderAcc(id,d){
+  const sumEl=document.getElementById('accsum-'+id), rowsEl=document.getElementById('accrows-'+id);
+  if(!sumEl||!rowsEl)return;                       // การ์ด v1 ไม่มีแผงนี้
+  const accs=Array.isArray(d.acc)?d.acc:[], dl=d.daily||0, hl=d.hourly||0;
+  const dayFull=a=>dl>0&&(a.today||0)>=dl, hourFull=a=>hl>0&&(a.hour||0)>=hl;
+  if(!accs.length){ sumEl.className='sum'; sumEl.textContent=''; setHTML(rowsEl,''); return; }
+  const ready=accs.filter(a=>!dayFull(a)).length;
+  sumEl.className='sum'+(ready===0?' full':'');
+  sumEl.innerHTML=(ready===0?'เต็มหมด ':'พร้อม ')+'<b>'+ready+'</b>/'+accs.length;
+  setHTML(rowsEl,accs.map(a=>{
+    const df=dayFull(a),hf=hourFull(a);
+    const dv=df?`<span class="full">วัน <b>${a.today||0}</b>/${dl} ❗</span>`:`<span>วัน <b>${a.today||0}</b>/${dl}</span>`;
+    const hv=hf?`<span class="full">ชม. <b>${a.hour||0}</b>/${hl} ❗</span>`:`<span>ชม. <b>${a.hour||0}</b>/${hl}</span>`;
+    const nm=a.name?esc(a.name):'<span class="noname">ยังไม่ตั้งชื่อ</span>';
+    let act;
+    if(a.active)act='<span class="acc-cur">ใช้อยู่</span>';
+    // เต็มวัน = สลับไปก็ลงไม่ได้ (แอปเช็คลิมิตก่อนโพสทุกครั้ง) แต่ยังสลับไป "ดึงยอด Affiliate" ได้ —
+    // ↻ อ่านยอดได้เฉพาะบัญชีที่ใช้อยู่ ถ้าไม่มีปุ่มนี้ บัญชีที่เต็มจะอ่านยอดจากเว็บไม่ได้เลยทั้งวัน
+    else if(df)act=`<span class="acc-fulllbl">เต็มวัน</span><button class="acc-switch acc-switch--full" onclick="switchAccFull('${id}',${a.i},'${esc(a.name||'')}')" title="โพสต์ครบวันแล้ว — สลับไปเพื่อดึงยอด Affiliate เท่านั้น">สลับ (ดูยอด)</button>`;
+    else act=`<button class="acc-switch" onclick="switchAcc('${id}',${a.i})">สลับมา</button>`;
+    // แถวที่สอง = บัญชี "web" ที่ใช้เก็บสินค้า (คนละตัวกับบัญชีโพส: อันนั้นสลับในแอป Shopee,
+    // อันนี้คือ cookie jar ของ WebView ซึ่งสลับได้ด้วยการรีสตาร์ทแอปเท่านั้น) — ไม่มีลิมิตวัน/ชม.
+    // มาเกี่ยว เต็มวันก็ยังใช้เก็บได้ เลยโชว์ปุ่มเสมอ. เครื่องแอปเก่าไม่ส่ง webActive → ไม่ต้องโชว์
+    const hasWeb=accs.some(z=>typeof z.webActive==='boolean');
+    const web=!hasWeb?'':(a.webActive
+      ?'<span class="acc-web cur" title="บัญชีที่ใช้ดึงข้อมูลสินค้าอยู่ตอนนี้">เก็บอยู่</span>'
+      :`<button class="acc-web" onclick="switchWebAcc('${id}',${a.i})" title="ใช้บัญชีนี้ดึงข้อมูลสินค้า (แอปจะรีสตาร์ทเพื่อสลับ cookie jar)">ใช้เก็บ</button>`);
+    return `<div class="acc-row${a.active?' active':''}${a.webActive?' webon':''}"><span class="acc-mark"></span>`+
+      `<div class="acc-info"><div class="acc-nm"><span class="num">บัญชี</span>${nm}</div>`+
+      `<div class="acc-stats">${dv}${hv}</div></div><span class="acc-act">${act}${web}</span></div>`;
+  }).join(''));
+}
+function editName(id){const d=devices.find(x=>x.deviceId===id);const n=prompt('ตั้งชื่อเล่นเครื่อง (เว้นว่าง = ลบชื่อ)',(d&&d.name)||'');if(n!==null)send({type:'rename',deviceId:id,name:n.trim()});}
+function resetCount(id){if(confirm('รีเซ็ตตัวนับเครื่องนี้ (เก็บ/คลิป/ลง)?'))send({type:'resetcount',deviceId:id});}
+
+// เลือกการ์ดตาม ver ของเครื่อง — v1 (แอปเก่า) ชุดคำสั่ง เก็บ/รัน/เจน, v2 ชุด วน+ลง เต็ม
+function createCard(id,ver){ return (ver||1)>=2 ? createCardV2(id) : createCardV1(id); }
+
+// การ์ด v2 (แอปใหม่) — ครบ: สร้างคลิป/+โพส, บัญชี, ลง, พัก/ต่อ/หยุด
+function createCardV2(id){
+  const el=document.createElement('div');el.className='dev';el.dataset.id=id;el.dataset.ver='2';
+  el.innerHTML=`
+    <div class="top">
+      <span class="dot"></span>
+      <span class="name" id="nm-${id}"></span>
+      <span class="hdr-icons">
+        <button class="icon-btn" title="ตั้งชื่อเล่น" aria-label="ตั้งชื่อเล่น" onclick="editName('${id}')">${ic.pencil}</button>
+        <button class="icon-btn upd" id="upd-${id}" style="display:none" title="อัปเดตแอป" aria-label="อัปเดตแอป" onclick="askUpdate('${id}')">${ic.dl}</button>
+        <button class="icon-btn" title="ดูจอเครื่องตอนนี้ (ขอภาพหน้าจอ)" aria-label="ดูจอเครื่อง" onclick="openShot('${id}')">${ic.eye}</button>
+        <button class="icon-btn cfg" id="cfg-${id}" title="ตั้งค่าเครื่องจากเว็บ" aria-label="ตั้งค่าเครื่อง" onclick="openCfg('${id}')">⚙</button>
+      </span>
+    </div>
+    <div class="pills">
+      <span class="tag-pill ver" id="ver-${id}" title="version แอปบนเครื่อง"></span>
+      <span class="tag-pill a11y" id="a11y-${id}"></span>
+    </div>
+    <div class="updst" id="updst-${id}"></div>
+    <div class="statusline">
+      <span class="model" id="md-${id}"></span>
+      <span class="badge" id="bg-${id}"></span>
+    </div>
+    <div class="cnt">
+      <span class="chip">${ic.pkg} เก็บ <b id="cc-${id}">0</b></span>
+      <span class="chip g">${ic.film} คลิป <b id="cg-${id}">0</b></span>
+      <span class="chip o">${ic.bag} ลง <b id="cp-${id}">0</b></span>
+      <span class="chip">${ic.cal} วันนี้ <b id="ct-${id}">0</b></span>
+      <span class="chip stock" id="stc-${id}" onclick="openStock('${id}')" title="คลิปในคลังที่ยังไม่ได้โพส — กดดูรายชื่อสินค้า">${ic.pkg} คลัง <b id="st-${id}">0</b></span>
+      <button class="reset" onclick="resetCount('${id}')">รีเซ็ต</button>
+    </div>
+    <div class="meta" id="mt-${id}"></div>
+    <div class="ctl">
+      <div class="kwrow">
+        <div class="kw-wrap">${ic.search}<input class="kw" id="kw-${id}" placeholder="คีย์เวิร์ด — ใส่หลายคำได้ คั่นด้วย ," title="ใส่ได้หลายคำ เช่น  ครีมบำรุง, ลิปสติก, น้ำหอม&#10;เครื่องจะเก็บคำแรกจนหมดสต็อก แล้วสลับไปคำถัดไปเอง" /></div>
+        <select class="mode-sel" id="mo-${id}"><option value="PRODUCT">สินค้า</option><option value="SHOP">ร้าน</option></select>
+        <button class="kwsave" id="ks-${id}" onclick="kwSaveLib('${id}')" title="บันทึกคำที่พิมพ์ไว้เข้าคลังคำของเครื่องนี้ (เก็บบนเซิร์ฟเวอร์)&#10;ทุกเบราว์เซอร์ที่เปิดแดชบอร์ดเห็นเหมือนกัน แต่คำจะขึ้นที่การ์ดเครื่องนี้เท่านั้น">☆ บันทึก</button>
+        <button class="kwadd" id="ka-${id}" onclick="kwAdd('${id}')" title="เพิ่มคำที่พิมพ์ไว้ต่อท้ายคิว โดยไม่ต้องหยุดงานที่รันอยู่&#10;เครื่องจะทำคำปัจจุบันจนหมดสต็อกก่อน แล้วค่อยสลับไปคำใหม่">+ คิว</button>
+      </div>
+      <div class="kwlib" id="kl-${id}">
+        <button class="kwlib-head" onclick="toggleLib('${id}')" title="คำที่บันทึกไว้ของเครื่องนี้ — กดคำเพื่อใส่ลงช่อง, กด × เพื่อลบออกจากคลัง&#10;กด &quot;ทุกเครื่อง&quot; ท้ายลิสต์เพื่อดูคำที่เครื่องอื่นบันทึกไว้">★ คำที่บันทึกไว้ <span class="n" id="kln-${id}">0</span></button>
+        <div class="kwlib-body" id="klb-${id}"></div>
+      </div>
+      <div class="acts">
+        <div class="acts-row main">
+          <button class="btn btn--primary" onclick="cmd('${id}','loop')">${ic.film} สร้างคลิป</button>
+          <button class="btn btn--tonal" onclick="cmd('${id}','looppost')">${ic.bag} สร้างคลิป+โพส</button>
+        </div>
+        <div class="accwrap" id="acc-${id}">
+          <button class="acc-head" onclick="document.getElementById('acc-${id}').classList.toggle('open')">
+            <span class="chev">${ic.play}</span>บัญชี <span class="sum" id="accsum-${id}"></span>
+          </button>
+          <div class="acc-body">
+            <div id="accrows-${id}"></div>
+            <div class="postself">
+              <button class="btn btn--post" onclick="postSelf('${id}')">${ic.bag} โพสเอง</button>
+              <span class="lbl">จำนวน</span>
+              <input class="num" id="pc-${id}" type="number" min="1" max="99" value="5" inputmode="numeric" />
+            </div>
+          </div>
+        </div>
+        <div class="acts-row ctl3">
+          <button class="btn btn--ghost" onclick="cmd('${id}','pause')">${ic.pause} พัก</button>
+          <button class="btn btn--ghost" onclick="cmd('${id}','resume')">${ic.play} ต่อ</button>
+          <button class="btn btn--danger" onclick="cmd('${id}','cancel')">${ic.stop} หยุด</button>
+        </div>
+      </div>
+    </div>`;
+  return el;
+}
+// การ์ด v1 (แอปเก่า) — pipeline สั่งเอง: เก็บ→รัน→เจน + หยุด, มีช่อง "รอบ"
+// ไม่มีของ v2: ลง(posted), บัญชี, +โพส, พัก/ต่อ (แอป v1 ไม่รู้จัก → ตัดออกกันกดแล้วเงียบ)
+function createCardV1(id){
+  const el=document.createElement('div');el.className='dev';el.dataset.id=id;el.dataset.ver='1';
+  el.innerHTML=`
+    <div class="top">
+      <span class="dot"></span>
+      <span class="name" id="nm-${id}"></span>
+      <button class="icon-btn" title="ตั้งชื่อเล่น" aria-label="ตั้งชื่อเล่น" onclick="editName('${id}')">${ic.pencil}</button>
+      <span class="tag-pill ver" id="ver-${id}" title="version แอปบนเครื่อง"></span>
+      <span class="tag-pill a11y" id="a11y-${id}"></span>
+    </div>
+    <div class="statusline">
+      <span class="model" id="md-${id}"></span>
+      <span class="badge" id="bg-${id}"></span>
+    </div>
+    <div class="cnt">
+      <span class="chip">${ic.pkg} เก็บ <b id="cc-${id}">0</b></span>
+      <span class="chip g">${ic.film} คลิป <b id="cg-${id}">0</b></span>
+      <span class="chip">${ic.cal} วันนี้ <b id="ct-${id}">0</b></span>
+      <button class="reset" onclick="resetCount('${id}')">รีเซ็ต</button>
+    </div>
+    <div class="meta" id="mt-${id}"></div>
+    <div class="ctl">
+      <div class="kwrow">
+        <div class="kw-wrap">${ic.search}<input class="kw" id="kw-${id}" placeholder="คีย์เวิร์ด — ใส่หลายคำได้ คั่นด้วย ," title="ใส่ได้หลายคำ เช่น  ครีมบำรุง, ลิปสติก, น้ำหอม&#10;เครื่องจะเก็บคำแรกจนหมดสต็อก แล้วสลับไปคำถัดไปเอง" /></div>
+        <button class="kwsave" id="ks-${id}" onclick="kwSaveLib('${id}')" title="บันทึกคำที่พิมพ์ไว้เข้าคลังคำของเครื่องนี้ (เก็บบนเซิร์ฟเวอร์ — ทุกเบราว์เซอร์เห็นเหมือนกัน)">☆ บันทึก</button>
+        <button class="kwadd" id="ka-${id}" onclick="kwAdd('${id}')" title="เพิ่มคำที่พิมพ์ไว้ต่อท้ายคิว โดยไม่ต้องหยุดงานที่รันอยู่">+ คิว</button>
+      </div>
+      <div class="kwlib" id="kl-${id}">
+        <button class="kwlib-head" onclick="toggleLib('${id}')" title="คำที่บันทึกไว้ของเครื่องนี้ — กดคำเพื่อใส่ลงช่อง, กด × เพื่อลบออกจากคลัง&#10;กด &quot;ทุกเครื่อง&quot; ท้ายลิสต์เพื่อดูคำที่เครื่องอื่นบันทึกไว้">★ คำที่บันทึกไว้ <span class="n" id="kln-${id}">0</span></button>
+        <div class="kwlib-body" id="klb-${id}"></div>
+      </div>
+      <div class="opts">
+        <label class="fld"><span>โหมด</span>
+          <select id="mo-${id}"><option value="PRODUCT">สินค้า</option><option value="SHOP">ร้าน</option></select>
+        </label>
+        <label class="fld"><span>จำนวนรอบ</span>
+          <input class="num" id="rd-${id}" type="number" min="1" max="50" value="1" inputmode="numeric" />
+        </label>
+      </div>
+      <div class="acts">
+        <div class="acts-row ctl3">
+          <button class="btn btn--primary" onclick="cmd('${id}','collect')">${ic.pkg} เก็บ</button>
+          <button class="btn btn--tonal" onclick="cmd('${id}','run')">${ic.play} รัน</button>
+          <button class="btn btn--ghost" onclick="cmd('${id}','generate')">${ic.film} เจน</button>
+        </div>
+        <div class="acts-row main">
+          <button class="btn btn--danger" onclick="cmd('${id}','cancel')">${ic.stop} หยุด</button>
+        </div>
+      </div>
+    </div>`;
+  return el;
+}
+function patch(d){
+  const id=d.deviceId, st=(d.status&&d.status.state)||'IDLE';
+  const card=document.querySelector(`.dev[data-id="${id}"]`);
+  if(!card)return;
+  card.className='dev '+(d.online?'on':'off')+
+    ((d.deviceId===LOCKED_DEVICE&&!unlocked())?' locked':'');
+  const nm=document.getElementById('nm-'+id);
+  nm.textContent=d.name||'ยังไม่ตั้งชื่อ'; nm.className='name'+(d.name?'':' unset');
+  const bg=document.getElementById('bg-'+id); bg.textContent=stateLabel(st); bg.title='สถานะ: '+st; bg.className='badge '+badgeClass(st);
+  const vname=(d.status&&d.status.appVerName)||'';
+  document.getElementById('md-'+id).textContent=(d.model||'')+' · อัปเดต '+ago(d.lastSeen)+' ที่แล้ว'+(vname?' · '+vname:'');
+  document.getElementById('cc-'+id).textContent=d.collected||0;
+  document.getElementById('cg-'+id).textContent=d.generated||0;
+  const cp=document.getElementById('cp-'+id); if(cp)cp.textContent=d.posted||0;  // 'ลง' มีเฉพาะการ์ด v2
+  document.getElementById('ct-'+id).textContent=d.today||0;
+  // คลังยังไม่โพส (แอป ver>=6 ส่ง status.stock มา) — เครื่องแอปเก่าไม่ส่ง = ซ่อน chip ไปเลย
+  // ดีกว่าโชว์ "คลัง 0" ที่อ่านเหมือนคลังว่างจริง ๆ ทั้งที่แค่เครื่องไม่ได้รายงาน
+  const stc=document.getElementById('stc-'+id);
+  if(stc){const n=(d.status&&typeof d.status.stock==='number')?d.status.stock:null;
+    stc.style.display=(n===null)?'none':'';
+    if(n!==null)document.getElementById('st-'+id).textContent=n;}
+  if(stockDev===id)renderStock();   // modal เปิดค้างอยู่ที่เครื่องนี้ → อัปเดตรายชื่อสด ๆ
+  const a=document.getElementById('a11y-'+id);
+  a.innerHTML=(d.a11y?ic.shieldOk:ic.shieldNo)+'<span>'+(d.a11y?'คุมได้':'คุมไม่ได้')+'</span>';
+  a.title=d.a11y?'เปิดสิทธิ์ช่วยเหลือ (Accessibility) แล้ว — สั่งงานอัตโนมัติได้':'ยังไม่ได้เปิดสิทธิ์ช่วยเหลือบนเครื่อง — ต้องไปเปิดในตั้งค่า';
+  a.className='tag-pill a11y '+(d.a11y?'ok':'bad');
+  const v=document.getElementById('ver-'+id); const vn=d.ver||1;
+  const myAppVer=buildNo(d.status&&d.status.appVerName);
+  if(maxAppVer>0){
+    // At least one phone reports its app build → show ล่าสุด / แอปเก่า relative to the newest.
+    // NOTE: phones on an OLD apk send NO appVer (→0), so 0 < max must still count as "เก่า".
+    if(myAppVer>=maxAppVer){ v.textContent='ล่าสุด'; v.className='tag-pill ver latest'; v.title='แอปล่าสุด — '+(vname||('build '+myAppVer)); }
+    else { v.textContent='แอปเก่า'; v.className='tag-pill ver old'; v.title='แอปเก่า — '+(vname||('build '+(myAppVer||'ไม่รายงาน')))+'\nล่าสุดในฝูง = build '+maxAppVer+' ควรอัปเดตเครื่องนี้'; }
+  } else {
+    // No phone reports an app build yet → fall back to the fleet-protocol version pill.
+    v.textContent='v'+vn; v.className='tag-pill ver'+(vn>=2?' v2':''); v.title=vn>=2?'แอปเวอร์ชันใหม่ (รองรับ วน+ลง Shopee)':'แอปเวอร์ชันเก่า — อัปเดตเพื่อใช้ วน+ลง';
+  }
+  const prod=d.status&&d.status.product, kw=d.status&&d.status.keyword, err=d.status&&d.status.error, clip=d.status&&d.status.clip, posted=d.status&&d.status.posted, post=d.status&&d.status.post;
+  // pill สุขภาพ — โชว์เฉพาะตอนป่วย (ปกติไม่ขึ้นอะไรเลย ไม่รกจอ); แอปเก่าไม่ส่ง field พวกนี้ = ไม่ขึ้น
+  const st_=d.status||{};let health='';
+  if(st_.overlay===false)health+=`<span class="mtag bad">สิทธิ์ทับจอหลุด — สั่งงานข้ามแอปไม่ได้</span>`;
+  if(typeof st_.diskFreeMb==='number'&&st_.diskFreeMb<3072)health+=`<span class="mtag bad">พื้นที่เหลือ ${(st_.diskFreeMb/1024).toFixed(1)}GB${st_.diskFreeMb<2048?' — หยุดเจนแล้ว':''}</span>`;
+  const fv=flowNo(st_.flowVer);
+  if(maxFlowVer>0&&fv>0&&fv<maxFlowVer)health+=`<span class="mtag bad">แอป Flow เก่า (${esc(st_.flowVer)}) — อัปเดตใน Play Store</span>`;
+  // selector หาไม่เจอ (auto-diag) — โชว์ key ที่พัง + marker บนจอ ให้แก้ preset ได้ไม่ต้องต่อ adb
+  if(d.selfail&&(Date.now()-d.selfail.ts)<3600000&&!((d.lastDone||0)>d.selfail.ts)){const mk=(d.selfail.markers||[]).map(esc).join(' · ');
+    health+=`<span class="mtag bad" title="จอตอนนั้นมี: ${mk}">⚠ ${esc(d.selfail.key)} หาไม่เจอ — จอมี: ${mk.slice(0,120)}</span>`;}
+  // คิวหลายคีย์เวิร์ด (เซิร์ฟเป็นคนวนให้): โชว์ว่าอยู่คำที่เท่าไหร่ + กำลังสลับคำอยู่หรือเปล่า
+  // คิวที่โดนล้างตอนกดหยุด/พัก — เซิร์ฟจำไว้ให้ (devices.json) กดกู้กลับมาได้ทั้งคำและโหมดรายคำ.
+  // โชว์เฉพาะตอนไม่มีคิวที่วิ่งอยู่ ไม่งั้นสองป้ายคิวซ้อนกันอ่านไม่รู้เรื่อง
+  const lq=d.lastKwq;let lqTag='';
+  const kq=d.kwq;let kqTag='';
+  // สลับ สร้างคลิป ↔ สร้างคลิป+โพส ระหว่างทาง โดยคิวคีย์เวิร์ดไม่หาย (ปุ่มงานปกติล้างคิวทิ้ง)
+  let modeTag='';
+  const curAct=(kq&&kq.action)||d.lastAction||'';
+  if(d.online&&(d.ver||1)>=2&&(curAct==='loop'||curAct==='looppost')){
+    const to=curAct==='looppost'?'loop':'looppost';
+    modeTag=`<span class="mtag mode" onclick="kwqMode('${id}','${to}')" title="ตอนนี้: ${ACT_TH[curAct]}&#10;กดเพื่อสลับเป็น ${ACT_TH[to]} โดยคิวคีย์เวิร์ดไม่หาย&#10;&#10;เครื่องจะหยุดงานที่ทำค้างอยู่แล้วเริ่ม *คำเดิม* ใหม่ด้วยโหมดใหม่ (คลิปที่ทำค้างเสีย 1 ตัว)">⇄ ${ACT_TH[to]}</span>`;
+  }
+  if(lq&&lq.list&&lq.list.length&&!(kq&&kq.list&&kq.list.length)){
+    const md=i=>((lq.modes||[])[i]==='SHOP'?'ร้าน:':'');
+    const full=lq.list.map((w,i)=>md(i)+w).join(' → ');
+    // คิวที่กู้จะทำต่อด้วย "คำสั่งงานล่าสุดที่กด" ไม่ใช่โหมดตอนที่คิวโดนเก็บ — บอกไว้ตรงนี้เลย
+    // เพราะท่าปกติคือ หยุด → กดโหมดที่อยากได้ → กดกู้คิว แล้วต้องมั่นใจว่าคิวจะโพสต่อให้จริง
+    const act=ACT_TH[d.lastAction]||'';
+    lqTag=`<span class="mtag restore" onclick="kwqRestore('${id}')" title="คิวที่ถูกล้างตอนกดหยุด/พัก:&#10;${esc(full)}&#10;&#10;กดเพื่อเอากลับมา (คงโหมด สินค้า/ร้าน รายคำ) — เครื่องว่างจะเริ่มคำแรกให้เลย`+
+      (act?`&#10;คิวจะทำต่อด้วยโหมด: ${act} (= คำสั่งล่าสุดที่กด)`:'')+
+      `">↺ เอาคิวเดิมกลับมา ${lq.list.length} คำ`+(act?` · ${act}`:'')+
+      `<i class="x" onclick="kwqForget(event,'${id}')" title="ทิ้งคิวเดิมนี้ ไม่ต้องกู้แล้ว (ป้ายจะหายไป)">×</i></span>`;
+  }
+  if(kq&&kq.list&&kq.list.length>1){
+    // แต่ละคำมีโหมดของตัวเอง (สินค้า/ร้าน) — ติดป้ายเฉพาะคำที่เป็น "ร้าน" จะได้ไม่รกจอ
+    const md=i=>((kq.modes||[])[i]==='SHOP'?'ร้าน:':'');
+    const cur=md(kq.idx)+(kq.list[kq.idx]||'');
+    const full=kq.list.map((w,i)=>md(i)+w).join(' → ');
+    const wait=kq.list.length-(kq.idx+1);      // คำที่ยังไม่ได้เริ่ม = ลบออกได้
+    kqTag=`<span class="mtag kq" onclick="toggleKq('${id}')" title="คิวคีย์เวิร์ด: ${esc(full)}`+
+      (wait>0?'&#10;&#10;กดเพื่อดู/ลบคำที่ยังไม่ได้ทำ':'')+`">คีย์ ${kq.idx+1}/${kq.list.length}`+
+      (kq.stopping?' · กำลังสลับคำถัดไป…':' · '+esc(cur))+(wait>0?(kqOpen[id]?' ▾':' ▸'):'')+`</span>`;
+    // คำที่รันอยู่ (idx) ไม่มีให้ลบโดยตั้งใจ — จะเลิกทำคำนั้นคือกด "หยุด" ไม่ใช่กากบาทเล็ก ๆ
+    if(kqOpen[id]&&wait>0){
+      kqTag+=kq.list.map((w,i)=>i<=kq.idx?'':
+        `<span class="mtag kqw" title="คำที่ ${i+1} ในคิว (โหมด${(kq.modes||[])[i]==='SHOP'?'ร้าน':'สินค้า'})">`+
+        esc(md(i)+w)+
+        `<i class="x" data-w="${esc(w)}" onclick="kwqDel(event,'${id}',${i})" title="ลบคำนี้ออกจากคิว">×</i></span>`).join('')+
+        `<span class="mtag kqw clr" onclick="kwqDel(event,'${id}',-1)" title="ลบคำที่ยังไม่ได้ทำออกให้หมด — คำที่รันอยู่ไม่โดน&#10;อยากเริ่มใหม่ทั้งหมด: พิมพ์คำใหม่แล้วกดสั่งงาน (คิวเก่าโดนล้างเองอยู่แล้ว)">ล้างคิว ${wait} คำ</span>`;
+    }
+  }
+  setHTML(document.getElementById('mt-'+id),
+    health+modeTag+kqTag+lqTag+
+    (post?`<span class="mtag post">${ic.bag} ${esc(post)}</span>`:'')+
+    (prod?`<b>${esc(prod.slice(0,64))}</b><br>`:'')+
+    (kw?`<span class="mtag">${esc(kw)}</span>`:'')+(clip?`<span class="mtag ok">คลิปพร้อม</span>`:'')+(posted?`<span class="mtag ok">โพสต์แล้ว</span>`:'')+
+    (err?`<div class="err">${ic.alert}<span>${esc(err)}</span></div>`:''));
+  // While the phone is actively working, lock the "start new work" buttons so a second command can't
+  // collide with the running one (pause/resume/หยุด stay live). Use the app's real `running` flag
+  // (orchestrator.running) — NOT state!=='IDLE': after a stop the last job state stays FAILED/QUEUED
+  // (never flips to IDLE), which kept the buttons disabled forever. Old apps without the flag fall
+  // back to the state heuristic.
+  const running=(d.status&&typeof d.status.running==='boolean')?d.status.running:(st!=='IDLE');
+  card.querySelectorAll('.acts-row.main .btn, .postself .btn--post').forEach(b=>{ b.disabled=running; });
+  // กำลังรัน = โชว์ปุ่ม "+ คิว" แทน (ปุ่มสร้างคลิปโดน disable ไปแล้ว) — ใส่คำเพิ่มได้โดยไม่ต้องหยุด
+  card.classList.toggle('running',!!running&&d.online);
+  // ⚙ ตั้งค่าจากเว็บ: ต้องออนไลน์ + แอป ver>=3 (เครื่องแอปเก่าใช้แอปได้ปกติ แค่ตั้งจากเว็บไม่ได้)
+  const gear=document.getElementById('cfg-'+id);
+  if(gear){ const ok=d.online&&(d.ver||1)>=3; gear.disabled=!ok;
+    gear.title=ok?'ตั้งค่าเครื่องจากเว็บ':(d.online?'แอปเก่า — อัปเดตแอปก่อนถึงตั้งจากเว็บได้':'เครื่องออฟไลน์'); }
+  // ปุ่มอัปเดต: โผล่เฉพาะเครื่องที่แอปเก่ากว่าเครื่องอื่นในฟลีต. ใช้ ver สูงสุดที่เห็นเป็นตัวเทียบ
+  // แทนการจดเวอร์ชัน APK ไว้ที่เซิร์ฟเวอร์ — เครื่องที่เสียบสายถูกอัปก่อนเสมอ เครื่องที่เหลือจึงสว่างเอง
+  // และถ้าทุกเครื่องเท่ากันก็ไม่มีปุ่ม = ไม่มีอะไรต้องทำ ซึ่งถูกต้อง
+  const upd=document.getElementById('upd-'+id);
+  if(upd){
+    // ใช้ตัวตัดสินตัวเดียวกับป้าย "แอปเก่า/ล่าสุด" ด้านบน (buildNo = GIT_COUNT จาก appVerName)
+    // ไม่ใช้ d.ver (FLEET_VER) เพราะนั่นคือ "เลขความสามารถ" ที่ขยับเฉพาะตอนเพิ่มฟีเจอร์ฝั่งฟลีต —
+    // แก้โค้ดสิบรอบมันก็ยัง 7 เท่าเดิม ปุ่มจะไม่โผล่ทั้งที่โค้ดบนเครื่องเก่าไปแล้ว
+    // ผลพลอยได้: ปุ่มกับป้ายพูดตรงกันเสมอ (ป้ายว่าเก่า = มีปุ่มให้กด) ไม่งั้นคนจะสับสน
+    // เทียบกับ APK ที่เซิร์ฟเวอร์มีจริง ไม่ใช่เทียบเครื่องกันเอง — ไม่งั้นถ้าทุกเครื่องเก่าเท่ากัน
+    // (หรือมีเครื่องเดียว) จะไม่มีอะไรบอกได้ว่ามีตัวใหม่ให้อัปเดต ปุ่มก็ไม่โผล่ตลอดไป
+    // ถ้าเซิร์ฟเวอร์ยังไม่มี apk.json (apkBuild=0) ถอยไปใช้การเทียบกันเองแบบเดิม
+    var mine=buildNo(d.status&&d.status.appVerName);
+    var target=apkBuild||maxAppVer;
+    var isOld=target>0&&mine<target;
+    upd.style.display=isOld?'grid':'none';
+    // ไม่ปลดปุ่มเองระหว่างที่สั่งไปแล้ว (dataset.busy) — ไม่งั้น broadcast ทุก 2-3 วิ จะปลดให้กดซ้ำได้
+    if(!upd.dataset.busy)upd.disabled=!d.online;
+    var stEl=document.getElementById('updst-'+id);
+    if(!isOld&&stEl&&stEl.classList.contains('on')&&upd.dataset.busy){
+      // build บนเครื่องขยับถึงเป้าแล้ว = ติดตั้งจริงสำเร็จ (ไม่ต้องเดาจากข้อความ)
+      stEl.textContent='อัปเดตแอป: สำเร็จ — เครื่องรัน build '+target+' แล้ว';
+      stEl.className='updst on done';
+      delete upd.dataset.busy;
+      setTimeout(function(){stEl.className='updst';},15000);
+    }
+    upd.title=!d.online
+      ?'เครื่องออฟไลน์ — อัปเดตไม่ได้'
+      :((d.ver||1)<8
+        ?('แอปเก่า (build '+(mine||'ไม่รายงาน')+') — เก่าเกินกว่าจะสั่งอัปเดตจากเว็บ '+
+          'ต้องเอา APK ไปลงที่เครื่องเอง 1 ครั้งก่อน')
+        :('แอปเก่า (build '+(mine||'ไม่รายงาน')+' · มีให้อัปเดต build '+target+
+          ') — กดเพื่อสั่งอัปเดตจากระยะไกล'));
+  }
+  // เติมคีย์เวิร์ด/โหมดที่เซิร์ฟจำไว้ (devices.json) — เปิดจากเบราว์เซอร์ไหน/เครื่องไหนก็เห็นค่าเดิม.
+  // ไม่แตะช่องที่กำลังพิมพ์อยู่ (document.activeElement) ไม่งั้น broadcast จะกระชากตัวหนังสือหาย.
+  const kwEl=document.getElementById('kw-'+id);
+  if(kwEl&&kwEl!==document.activeElement&&kwEl.value!==(d.kw||''))kwEl.value=d.kw||'';
+  const moEl=document.getElementById('mo-'+id);
+  if(moEl&&moEl!==document.activeElement&&d.searchMode&&moEl.value!==d.searchMode)moEl.value=d.searchMode;
+  kwAddLabel(id);
+  renderAcc(id,d);
+}
+// พิมพ์คีย์เวิร์ด/เปลี่ยนโหมด → ส่งไปเก็บที่เซิร์ฟ (หน่วง 700ms กันยิงทุกตัวอักษร) เพื่อให้ค่าค้างอยู่
+// ข้ามการรีเฟรช/ข้ามเบราว์เซอร์. ใช้ event delegation เลยไม่ต้องผูก handler ตอนสร้างการ์ด
+const kwSaveT={};
+function saveKw(id){
+  clearTimeout(kwSaveT[id]);
+  kwSaveT[id]=setTimeout(()=>{
+    send({type:'kwtext',deviceId:id,
+      keywords:splitKw((document.getElementById('kw-'+id)||{}).value),
+      searchMode:(document.getElementById('mo-'+id)||{}).value||'PRODUCT'});
+  },700);
+}
+// ===== คลังคีย์เวิร์ด: บันทึกคำไว้ใช้ซ้ำ (เก็บบนเซิร์ฟเวอร์ ไม่ใช่ในเบราว์เซอร์) =====
+// เดิมช่องคีย์เวิร์ดพึ่ง autofill ของเบราว์เซอร์อย่างเดียว = คำที่เคยพิมพ์ติดอยู่กับเครื่อง/เบราว์เซอร์นั้น
+// คนอื่นเปิดแดชบอร์ดไม่เห็น และลบทิ้งจากในหน้าเว็บก็ไม่ได้. ตอนนี้เก็บที่ data/keywords.json บนเซิร์ฟ
+// → ใครบันทึก/ลบ ทุกคนเห็นทันที (เซิร์ฟ broadcast type:'keywords' ให้ทุกแผงที่เปิดอยู่)
+let kwLib=[];
+const kwSaveT2={};
+// การ์ดไหนกำลังดู "ทุกเครื่อง" อยู่ (ค่าตั้งต้น = ดูเฉพาะคำของเครื่องตัวเอง)
+// 2026-08-21: เดิมคลังเป็นกองกลางกองเดียว ทุกการ์ดโชว์คำของทุกเครื่องปนกัน — เครื่องละสิบคำสี่เครื่อง
+// ก็กลายเป็นสี่สิบ chip เท่ากันทุกการ์ด หาคำของเครื่องตัวเองไม่เจอ. คำที่บันทึกตอนนี้ติด deviceId ไปด้วย
+const libAll={};
+function toggleLib(id){const el=document.getElementById('kl-'+id);if(el)el.classList.toggle('open');}
+function toggleLibAll(ev,id){ev.stopPropagation();libAll[id]=!libAll[id];renderKwLib();}
+// คำ "ของกลาง" (dev ว่าง = บันทึกไว้ก่อนแยกรายเครื่อง) โชว์ทุกการ์ดเหมือนเดิม จะได้ไม่มีคำหายไปเฉย ๆ
+const kwMine=(it,id)=>!(it.dev||'')||it.dev===id;
+const kwLibFor=id=>libAll[id]?kwLib:kwLib.filter(it=>kwMine(it,id));
+const devName=dev=>{const d=devices.find(x=>x.deviceId===dev);return d?(d.name||d.model||dev):dev;};
+function renderKwLib(){
+  for(const card of document.querySelectorAll('.dev')){
+    const id=card.dataset.id;
+    const wrap=document.getElementById('kl-'+id); if(!wrap)continue;
+    const list=kwLibFor(id), mine=kwLib.filter(it=>kwMine(it,id)).length;
+    wrap.classList.toggle('has',kwLib.length>0);
+    const n=document.getElementById('kln-'+id); if(n)n.textContent=mine;
+    const body=document.getElementById('klb-'+id);
+    // sig ต้องมีสถานะ "ทุกเครื่อง/เครื่องนี้" ด้วย ไม่งั้นกดสลับแล้วลิสต์ไม่วาดใหม่
+    const sig=(libAll[id]?'ALL':'MINE')+'\n'+list.map(it=>(it.dev||'')+'|'+it.mode+'|'+it.w).join('\n');
+    if(!body||body.dataset.sig===sig)continue;      // ลิสต์เท่าเดิม = ไม่ต้องวาดใหม่ทุก broadcast
+    body.dataset.sig=sig;
+    body.innerHTML=list.map(it=>{
+      const w=esc(it.w), shop=it.mode==='SHOP', dev=it.dev||'', other=dev&&dev!==id;
+      return `<span class="kwchip" data-w="${w}" data-md="${shop?'SHOP':'PRODUCT'}" data-dev="${esc(dev)}"`+
+        ` onclick="useKw('${id}',this)"`+
+        ` title="กดเพื่อใส่คำนี้ลงช่องคีย์เวิร์ด (โหมด${shop?'ร้าน':'สินค้า'})`+
+        (other?`&#10;คำนี้บันทึกไว้จากเครื่อง ${esc(devName(dev))}`:'')+`">`+
+        (shop?'<span class="md">ร้าน</span>':'')+(other?`<span class="md">${esc(devName(dev))}</span>`:'')+w+
+        `<i class="x" onclick="delKw(event,this)" title="ลบคำนี้ออกจากคลัง (หายทุกเบราว์เซอร์)">×</i></span>`;
+    }).join('')+
+      (kwLib.length>mine||libAll[id]
+        ? `<span class="kwchip lib-all" onclick="toggleLibAll(event,'${id}')"`+
+          ` title="สลับระหว่างคำของเครื่องนี้ กับคำที่ทุกเครื่องบันทึกไว้">`+
+          (libAll[id]?`▾ เฉพาะเครื่องนี้ ${mine}`:`▸ ทุกเครื่อง ${kwLib.length}`)+`</span>`
+        : '');
+  }
+}
+// กดคำในคลัง = ต่อท้ายช่องคีย์เวิร์ดของการ์ดนั้น (ไม่ทับคำที่พิมพ์ค้างไว้) + ตั้งโหมดตามคำนั้น
+function useKw(id,el){
+  const inp=document.getElementById('kw-'+id); if(!inp)return;
+  const w=el.dataset.w, md=el.dataset.md==='SHOP'?'SHOP':'PRODUCT';
+  const cur=splitKw(inp.value);
+  if(!cur.includes(w))cur.push(w);
+  inp.value=cur.join(', ');
+  const mo=document.getElementById('mo-'+id); if(mo&&mo.value!==md)mo.value=md;
+  saveKw(id); kwAddLabel(id);                      // เก็บค่าที่ช่องไว้ที่เซิร์ฟเหมือนพิมพ์เอง
+}
+function delKw(ev,el){
+  ev.stopPropagation();                            // อย่าให้ทะลุไปโดน onclick ของ chip (ใส่คำลงช่อง)
+  const chip=el.parentNode, w=chip.dataset.w, md=chip.dataset.md==='SHOP'?'SHOP':'PRODUCT';
+  const dev=chip.dataset.dev||'';                  // ลบเฉพาะคำของเครื่องนี้ คำเดียวกันของเครื่องอื่นไม่โดน
+  if(!confirm('ลบคำ "'+w+'" ('+(md==='SHOP'?'ร้าน':'สินค้า')+') ออกจากคลังคำ'+
+    (dev?' ของ '+devName(dev):' (ของกลาง)')+'?\n\n'+
+    'คำนี้จะหายจากทุกเบราว์เซอร์ที่เปิดแดชบอร์ดอยู่\n(ไม่กระทบคิวที่เครื่องกำลังรัน)'))return;
+  send({type:'kwdel',w,mode:md,dev});
+}
+function kwSaveLib(id){
+  const kws=splitKw((document.getElementById('kw-'+id)||{}).value);
+  if(!kws.length){kwSaveNote(id,'พิมพ์คีย์เวิร์ดก่อน');return;}
+  send({type:'kwsave',deviceId:id,keywords:kws,
+    searchMode:(document.getElementById('mo-'+id)||{}).value||'PRODUCT'});
+}
+function kwSaveNote(id,msg){
+  const b=document.getElementById('ks-'+id); if(!b)return;
+  b.textContent=msg; clearTimeout(kwSaveT2[id]);
+  kwSaveT2[id]=setTimeout(()=>{b.textContent='☆ บันทึก';},2000);
+}
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('kw')&&t.id.startsWith('kw-'))saveKw(t.id.slice(3));});
+document.addEventListener('change',e=>{const t=e.target;if(t&&t.id&&t.id.startsWith('mo-')){saveKw(t.id.slice(3));kwAddLabel(t.id.slice(3));}});
+function render(){
+  onCount.textContent=devices.filter(d=>d.online).length;
+  allCount.textContent=devices.length;
+  // Newest build seen across the fleet, by git COMMIT COUNT parsed from appVerName ("#35 sha · time").
+  // Commit count = how new the CODE is (NOT build wall-clock time — a newer-code build compiled earlier
+  // must still win). Old date-scheme builds have no appVerName → count 0 → always "แอปเก่า".
+  maxAppVer=devices.reduce((m,d)=>Math.max(m,buildNo(d.status&&d.status.appVerName)),0);
+  maxFlowVer=devices.reduce((m,d)=>Math.max(m,flowNo(d.status&&d.status.flowVer)),0);
+  empty.style.display=devices.length?'none':'block';
+  // เรียงการ์ด: กำลังรัน → ออนไลน์เฉย ๆ → ออฟไลน์; ในกลุ่มเดียวกันเรียงตามชื่อ (ไม่ใช้ lastSeen
+  // เป็นตัวเรียง — heartbeat ทุก 20 วิจะทำให้การ์ดสลับที่เองตลอดจนกดพลาด)
+  const nameOf=d=>String(d.name||d.model||d.deviceId);
+  const sorted=[...devices].sort((a,b)=>
+    nameOf(a).localeCompare(nameOf(b),'th')||String(a.deviceId).localeCompare(String(b.deviceId)));
+  const grid=document.getElementById('grid'),seen=new Set();
+  for(const d of sorted){
+    seen.add(d.deviceId);
+    const want=(d.ver||1)>=2?2:1;
+    let card=grid.querySelector(`.dev[data-id="${d.deviceId}"]`);
+    // ไม่มีการ์ด หรือเครื่องเปลี่ยนเวอร์ชัน (อัปเดตแอป v1→v2) → สร้างการ์ดใหม่ให้ตรงเวอร์ชัน
+    if(!card || +card.dataset.ver!==want){ if(card)card.remove(); card=createCard(d.deviceId,d.ver); grid.appendChild(card); }
+    patch(d);
+  }
+  [...grid.children].forEach(c=>{if(!seen.has(c.dataset.id))c.remove();});
+  // จัดตำแหน่ง DOM ตามลำดับใหม่ เฉพาะตอนลำดับเปลี่ยนจริง (appendChild ย้าย node = โฟกัส/ค่าที่พิมพ์
+  // ในช่องคีย์เวิร์ดหลุด เลยไม่ย้ายฟรี ๆ ทุก broadcast)
+  const wantOrder=sorted.map(d=>d.deviceId).join();
+  const curOrder=[...grid.children].map(c=>c.dataset.id).join();
+  if(wantOrder!==curOrder)for(const d of sorted)grid.appendChild(grid.querySelector(`.dev[data-id="${d.deviceId}"]`));
+  renderKwLib();          // การ์ดที่เพิ่งสร้างยังไม่มี chip คลังคำ — เติมให้ที่นี่ (ของเดิมข้ามด้วย sig)
+  renderBoard();
+}
+function renderBoard(){
+  const ranked=[...devices].filter(d=>(d.today||0)>0).sort((a,b)=>(b.today||0)-(a.today||0));
+  const board=document.getElementById('board'),rows=document.getElementById('boardRows');
+  if(!ranked.length){board.style.display='none';return;}
+  board.style.display='block';
+  const max=ranked[0].today||1;
+  setHTML(rows,ranked.map((d,i)=>{
+    const nm=esc(d.name||d.model||d.deviceId.slice(0,8));
+    const last=d.lastDone?`<span class="blast">เจนล่าสุด ${ago(d.lastDone)} ที่แล้ว</span>`:'';
+    // เจนล่าสุดค้างนาน = เตือนด้วยสีแถบ (>7m ส้ม, >25m แดง)
+    const mins=d.lastDone?(Date.now()-d.lastDone)/60000:0;
+    const stale=mins>25?" bad":mins>7?" warn":"";
+    return `<div class="brow"><span class="rank">${i+1}</span>`+
+      `<div class="bnm">${nm}${last}<div class="bbar${stale}" style="width:${Math.round((d.today/max)*100)}%"></div></div>`+
+      `<span class="bn">${d.today}</span></div>`;
+  }).join(''));
+}
+connect();
+
+// ===== ⚙ ตั้งค่าเครื่องจากเว็บ (fleet v3) =====
+// เปิด modal → ขอค่าจริงจากเครื่อง (getsettings) → แก้ → ส่งเฉพาะที่เปลี่ยน (applysettings) → รอ ack.
+// เทมเพลตเก็บกลางบนเซิร์ฟเวอร์ ใช้ได้กับทุกเครื่อง (แต่ apply ทีละเครื่องเสมอ)
+let tplStore={}, cfgDev=null, cfgBase=null, cfgTimer=null;
+const CFG_FIELDS=[
+  ['dailyLimit','ลิมิตวัน / บัญชี','int'],
+  ['hourlyLimit','ลิมิตราย ชม. / บัญชี','int'],
+  ['postAccountCount','จำนวนบัญชีหมุนโพส','int'],
+  // ชื่อผู้ใช้ Shopee ประจำแต่ละช่อง (แอป ver>=9; เครื่องเก่าไม่ส่งคีย์นี้มา → ซ่อนแถวทิ้ง)
+  // ต้องตรงกับที่โชว์ในหน้า Shopee "เปลี่ยนบัญชีผู้ใช้" เป๊ะ ๆ เพราะเครื่องใช้ชื่อนี้ "กดตามชื่อ"
+  ['accountName1','ชื่อผู้ใช้ บัญชี 1','str','ตัวนับ วัน/ชม. ผูกกับ "ช่อง" ไม่ได้ผูกกับชื่อ → สลับชื่อสองช่อง = ย้ายยอดข้ามบัญชี (แก้ทั้งสองช่องแล้วกดส่งทีเดียว ไม่งั้นชื่อจะซ้ำกันชั่วคราว)'],
+  // เปิด/ปิดการโพสต์รายช่อง (แอป ver>=12) — ปิดแล้วช่องนั้นหลุดจากรอบหมุนทันทีโดยชื่อผู้ใช้ยังอยู่ครบ
+  // มีไว้สำหรับบัญชีที่โดนตรวจ/โดนแบนชั่วคราว: ถ้าลบชื่อทิ้งแทน จะเสียการสลับ+ยืนยันด้วยชื่อ และยอด
+  // วัน/ชม. ที่ผูกกับช่องจะเพี้ยนตามไปด้วย
+  ['accountEnabled1','โพสต์ด้วยบัญชี 1','bool'],
+  ['accountName2','ชื่อผู้ใช้ บัญชี 2','str'],
+  ['accountEnabled2','โพสต์ด้วยบัญชี 2','bool'],
+  ['accountName3','ชื่อผู้ใช้ บัญชี 3','str'],
+  ['accountEnabled3','โพสต์ด้วยบัญชี 3','bool'],
+  ['postBufferTarget','สะสมกี่คลิปถึงเริ่มโพส','int'],
+  ['videoTimeoutMinutes','รอเรนเดอร์สูงสุด (นาที)','int'],
+  // เก็บสินค้าเข้าคลังทีเดียวหลายหน้า แล้วทยอยหยิบไปเจน — ไม่ต้องเปิด Shopee ทุกคลิป
+  // เป็นเพดาน ไม่ใช่เป้า: คีย์เวิร์ดหมดของก่อนก็หยุดเอง เอาเท่าที่ได้ (1 หน้า ≈ 20 ชิ้น)
+  ['collectMaxPages','เก็บสินค้ากี่หน้าต่อรอบ','int'],
+  // ท่าเดียวที่แอปจบโปรเซส Flow เองได้ (killBackgroundProcesses ไม่โดนแอปอื่น และปุ่ม "บังคับหยุด"
+  // ของ MIUI ถูกล็อกไว้ที่หน้าข้อมูลแอปของ Flow) ปิดแล้วจะเหลือแค่เปิดใหม่เฉย ๆ ซึ่งวัดแล้วว่าหน้าขาวไม่หาย
+  ['flowRecentsSwipeEnabled','หน้าขาว → ปัดการ์ด Flow ทิ้ง','bool'],
+  ['deleteClipAfterPost','ลบคลิปหลังโพสต์สำเร็จ','bool'],
+  // Flow มีสองทางเข้า และมันพังคนละแบบ: whisk อัปเดตทีนึง a11y tree เปลี่ยน (APP พัง แต่ WEB รอดอยู่)
+  // ส่วน WebView ก็เจอ Flow เปลี่ยน DOM/ภาษาของมันเอง สลับจากเว็บได้ = ไม่ต้องรอไปกดที่เครื่อง
+  // ต้องแอป ver>=5; เครื่องที่ไม่ได้ลง whisk จะเลือก APP ไม่ได้ (ตัวเลือกถูกล็อก)
+  ['flowBackend','Flow ที่ใช้เจนคลิป','pick',[['WEB','WebView ในแอป'],['APP','แอป Google Flow']]],
+  // โมเดลที่เจนรูปตั้งต้นก่อนให้ Veo ทำเป็นคลิป — Nano Banana 2 ฟรี (0 เครดิต) ส่วน Pro ยังไม่ยืนยันราคา
+  // จึงเขียนกำกับว่าตัวไหนฟรีไว้ตรงตัวเลือก ให้เห็นตอนกดเลย ไม่ต้องไปเปิดเอกสาร
+  // ต้องแอปที่รองรับ imageModel (pondy-app ed13f7e ขึ้นไป) เครื่องเก่าจะตอบกลับเป็น skipped
+  ['imageModel','โมเดลรูปภาพ (Flow)','pick',[['NANO_BANANA_2','Nano Banana 2 (ฟรี)'],['NANO_BANANA_2_LITE','Nano Banana 2 Lite'],['NANO_BANANA_PRO','Nano Banana Pro (เสียเครดิต)']]],
+  ['videoTemplate','พรอมต์วิดีโอ (Veo)','text'],
+  ['imageTemplate','พรอมต์รูป','text'],
+  ['defaultVoiceScript','สคริปต์เสียงสำรอง','text'],
+  ['voiceOverBannedWords','คำต้องห้ามในเสียง','text'],
+  ['voiceOverReplacements','คำแทนที่ในเสียง','text'],
+];
+document.body.insertAdjacentHTML('beforeend',`
+<style>
+.cfg-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+.cfg-ov.open{display:flex}
+.cfg-md{background:var(--card,#1c1c22);border:1px solid rgba(255,255,255,.1);border-radius:16px;max-width:560px;width:100%;padding:18px}
+.cfg-md h3{margin:0 0 4px;font-size:16px;display:flex;align-items:center;gap:8px}
+.cfg-md .sub{font-size:12px;opacity:.65;margin-bottom:12px}
+.cfg-note{font-size:12.5px;border-radius:10px;padding:8px 10px;margin:0 0 10px;display:none}
+.cfg-note.warn{display:block;background:rgba(255,180,0,.12);color:#ffcf66}
+.cfg-note.ok{display:block;background:rgba(60,200,120,.12);color:#7ce0a8}
+.cfg-note.err{display:block;background:rgba(255,90,90,.12);color:#ff9d9d}
+.cfg-tpl{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.cfg-tpl select{flex:1;min-width:140px;background:rgba(255,255,255,.06);color:inherit;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:7px 9px;font-size:13px}
+.cfg-tpl .tbtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:inherit;border-radius:9px;padding:7px 10px;font-size:12.5px;cursor:pointer}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.cfg-f{display:flex;flex-direction:column;gap:4px;font-size:12px;opacity:.95}
+.cfg-f input[type=number],.cfg-f input[type=text]{background:rgba(255,255,255,.06);color:inherit;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:8px;font-size:14px}
+.cfg-f .cfg-hint{font-size:11.5px;opacity:.6;line-height:1.45}
+.cfg-f select{background:rgba(255,255,255,.06);color:inherit;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:8px;font-size:14px}
+.cfg-f select option{background:#1c1c22;color:#fff}
+.cfg-f.wide{grid-column:1/-1}
+.cfg-f textarea{background:rgba(255,255,255,.06);color:inherit;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:8px;font-size:12.5px;min-height:64px;resize:vertical;font-family:inherit}
+.cfg-f .okmark{color:#7ce0a8;font-size:11px;display:none}
+.cfg-f.applied .okmark{display:inline}
+.cfg-adv{grid-column:1/-1;display:grid;gap:10px}
+.cfg-adv>summary{cursor:pointer;user-select:none;font-size:12.5px;opacity:.9;padding:2px 0}
+.cfg-chk{display:flex;align-items:center;gap:8px;font-size:13px;grid-column:1/-1}
+.cfg-rot{border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;margin-bottom:12px}
+.cfg-rot .rt-head{font-size:12.5px;margin-bottom:8px;opacity:.9}
+  .cfg-rot summary.rt-head{cursor:pointer;margin-bottom:0;user-select:none}
+  .cfg-rot details[open] summary.rt-head{margin-bottom:8px}
+.cfg-rot .rt-state{opacity:.6;margin-left:6px}
+.cfg-rot .rt-state.on{color:#7ce0a8;opacity:1}
+.rt-list{display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px}
+.rt-list label{display:flex;align-items:center;gap:6px;font-size:12.5px}
+.rt-list .rt-none{font-size:12px;opacity:.5}
+.sf-row{font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.sf-row:last-child{border-bottom:none}
+.sf-row .sf-t{opacity:.55;margin-right:8px}
+.sf-row .sf-mk{opacity:.6;font-size:11.5px;margin-top:2px;line-height:1.45;word-break:break-word}
+.rt-acts{display:flex;gap:8px}
+.cfg-acts{display:flex;gap:10px;margin-top:12px}
+.cfg-acts .btn{flex:1}
+.icon-btn.cfg:disabled{opacity:.35;cursor:not-allowed}
+</style>
+<div class="cfg-ov" id="shotOv" onclick="if(event.target===this)closeShot()">
+  <div class="cfg-md" style="max-width:350px">
+    <h3>ดูจอเครื่อง <span id="shotName"></span></h3>
+    <div class="sub" id="shotSub">ภาพนิ่ง ณ ตอนกด — ไม่ใช่วิดีโอสด และไม่รบกวนงานที่เครื่องกำลังทำ</div>
+    <div id="shotBody" style="text-align:center;min-height:120px;display:grid;place-items:center">
+      <span style="opacity:.6;font-size:13px">กำลังขอภาพจากเครื่อง…</span>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn--ghost" onclick="reqShot()">ถ่ายใหม่</button>
+      <button class="btn btn--ghost" onclick="closeShot()">ปิด</button>
+    </div>
+  </div>
+</div>
+<div class="cfg-ov" id="cfgOv" onclick="if(event.target===this)closeCfg()">
+  <div class="cfg-md">
+    <h3>⚙ ตั้งค่าเครื่อง <span id="cfgName"></span></h3>
+    <div class="sub">ค่าอ่านสดจากเครื่องจริง · API keys ตั้งจากเว็บไม่ได้ (ตั้งใจ) · apply ทีละเครื่องเท่านั้น</div>
+    <div class="cfg-note" id="cfgNote"></div>
+    <div class="cfg-tpl">
+      <select id="cfgTplSel" onchange="useTpl()"><option value="">— เทมเพลต —</option></select>
+      <button class="tbtn" onclick="saveTpl()">บันทึกเป็นเทมเพลต</button>
+      <button class="tbtn" onclick="delTpl()">ลบ</button>
+    </div>
+    <div class="cfg-rot">
+      <div class="rt-head">วนเทมเพลตทุก 15 นาที (เฉพาะเครื่องนี้) <span class="rt-state" id="rotState"></span></div>
+      <div class="rt-list" id="rotList"></div>
+      <div class="rt-acts">
+        <button class="tbtn" id="rotBtn" onclick="toggleRot()">เริ่มวน</button>
+        <button class="tbtn" onclick="rotateNow()">หมุนเดี๋ยวนี้</button>
+      </div>
+    </div>
+    <div class="cfg-rot" id="selBox">
+      <details>
+        <summary class="rt-head">Selectors — แก้ข้อความ/ตำแหน่งกดตอนแอปอัปเดตเปลี่ยน UI (ไม่ต้องอัปแอป) <span class="rt-state" id="selState"></span></summary>
+        <div id="selList"></div>
+        <div class="rt-acts"><button class="tbtn" onclick="applySelectors()">⬆ ส่ง selector ล่าสุด (จากเซิร์ฟ) เข้าเครื่อง</button></div>
+      </details>
+    </div>
+    <details class="cfg-rot">
+      <summary class="rt-head">ประวัติ selector หาไม่เจอ <span class="rt-state" id="sfState"></span></summary>
+      <div id="sfList"></div>
+    </details>
+    <div class="cfg-grid" id="cfgGrid"></div>
+    <div class="cfg-acts">
+      <button class="btn btn--ghost" onclick="closeCfg()">ปิด</button>
+      <button class="btn btn--primary" id="cfgApply" onclick="applyCfg()">ส่งไปเครื่อง</button>
+    </div>
+  </div>
+</div>`);
+function cfgNote(cls,msg){const n=document.getElementById('cfgNote');n.className='cfg-note '+cls;n.textContent=msg;}
+function buildCfgGrid(){
+  const adv=[];
+  document.getElementById('cfgGrid').innerHTML=CFG_FIELDS.map(([k,label,t,opts])=>{
+    if(t==='bool')return`<label class="cfg-chk" id="cfw-${k}"><input type="checkbox" id="cf-${k}"> ${label} <span class="okmark">✓</span></label>`;
+    if(t==='int')return`<label class="cfg-f"><span>${label} <span class="okmark">✓ ส่งแล้ว</span></span><input type="number" id="cf-${k}"></label>`;
+    // str = ข้อความบรรทัดเดียว (ชื่อบัญชี) — ปิด autocomplete/spellcheck ไม่งั้นเบราว์เซอร์เดา
+    // ชื่อผู้ใช้ของคนกดเว็บมาเติมให้ แล้วเผลอกดส่งเข้าเครื่อง; opts = คำอธิบายใต้ช่อง (ถ้ามี)
+    if(t==='str')return`<label class="cfg-f wide" id="cfw-${k}"><span>${label} <span class="okmark">✓ ส่งแล้ว</span></span>`+
+      `<input type="text" id="cf-${k}" autocomplete="off" spellcheck="false">${opts?`<small class="cfg-hint">${esc(opts)}</small>`:''}</label>`;
+    if(t==='pick')return`<label class="cfg-f wide" id="cfw-${k}"><span>${label} <span class="okmark">✓ ส่งแล้ว</span></span>`+
+      `<select id="cf-${k}">${(opts||[]).map(([v,txt])=>`<option value="${esc(v)}">${esc(txt)}</option>`).join('')}</select></label>`;
+    adv.push(`<label class="cfg-f wide"><span>${label} <span class="okmark">✓ ส่งแล้ว</span></span><textarea id="cf-${k}"></textarea></label>`);
+    return'';
+  }).join('')+`<details class="cfg-adv"><summary>พรอมต์ / สคริปต์เสียง (${adv.length} ช่อง)</summary>${adv.join('')}</details>`;
+}
+buildCfgGrid();
+function fillCfg(s){for(const[k,,t]of CFG_FIELDS){const el=document.getElementById('cf-'+k);if(!(k in s))continue;
+  if(t==='bool')el.checked=!!s[k];else el.value=s[k];}
+  // เครื่องแอปเก่า (ver<5) ไม่ส่ง flowBackend มาเลย → ซ่อนแถวไปเลยดีกว่าโชว์ dropdown ที่กดแล้วโดนข้าม
+  const fw=document.getElementById('cfw-flowBackend');
+  if(fw)fw.style.display=('flowBackend' in s)?'':'none';
+  // เครื่องที่ไม่ได้ลงแอป Google Flow เลือก APP ไม่ได้ — เครื่องจะปฏิเสธอยู่แล้ว แต่ล็อกที่นี่ด้วย
+  // จะได้รู้ตั้งแต่ก่อนกดส่ง แทนที่จะเห็นเป็น "ข้าม: flowBackend" ทีหลังแล้วงงว่าทำไมไม่เปลี่ยน
+  const sel=document.getElementById('cf-flowBackend');
+  if(sel){const has=s.flowAppInstalled!==false;const o=[...sel.options].find(x=>x.value==='APP');
+    if(o){o.disabled=!has;o.textContent=has?'แอป Google Flow':'แอป Google Flow (ไม่ได้ติดตั้ง)';}}
+  // เหตุผลเดียวกับ flowBackend: แอปที่ยังไม่รองรับ imageModel ไม่ส่งคีย์นี้มา ถ้าโชว์ dropdown ไว้
+  // คนจะกดเลือก Pro แล้วได้ "ข้าม: imageModel" กลับมาโดยไม่รู้ว่าต้องอัปแอปก่อน → ซ่อนแถวไปเลย
+  const iw=document.getElementById('cfw-imageModel');
+  if(iw)iw.style.display=('imageModel' in s)?'':'none';
+  // ชื่อบัญชี: แอป ver<9 ไม่ส่งคีย์มา ถ้าโชว์ช่องว่างไว้จะดูเหมือน "เครื่องนี้ยังไม่ตั้งชื่อบัญชี"
+  // ทั้งที่ตั้งไว้แล้วในแอป — คนจะพิมพ์ทับแล้วได้ "ข้าม: accountName1" กลับมาโดยไม่รู้ว่าต้องอัปแอป
+  // สวิตช์บัญชีอยู่ในลิสต์นี้ด้วย: แอป ver<12 ไม่ส่ง accountEnabled มา ถ้าโชว์ไว้จะเป็นช่องไม่ติ๊ก
+  // ซึ่งอ่านได้ว่า "ช่องนี้ถูกพัก" ทั้งที่จริง ๆ ยังโพสต์อยู่ปกติ — หลอกตากว่าช่องชื่อว่างเสียอีก
+  for(const k of ['accountName1','accountName2','accountName3','accountEnabled1','accountEnabled2','accountEnabled3']){
+    const w=document.getElementById('cfw-'+k);
+    if(w)w.style.display=(k in s)?'':'none';
+  }
+}
+function readCfg(){const out={};for(const[k,,t]of CFG_FIELDS){const el=document.getElementById('cf-'+k);
+  out[k]=t==='bool'?el.checked:(t==='int'?parseInt(el.value,10)||0:el.value);}return out;}
+// ── อัปเดตแอปจากระยะไกล ───────────────────────────────────────────────────
+// เตือนก่อนเพราะการอัปเดตหยุดงานที่เครื่องกำลังทำ (แอปถูกแทนที่ทั้งตัว) แล้ว watchdog
+// จะกู้ลูปกลับให้เองใน ~90 วิ — เสียคลิปที่ทำค้างไปหนึ่งตัว ไม่ถึงกับต้องมีคนไปกด
+function askUpdate(id){
+  var d=devices.find(function(x){return x.deviceId===id;});
+  var nm=(d&&(d.name||d.model))||id.slice(0,8);
+  var lines=[
+    'สั่งอัปเดตแอปบนเครื่อง "'+nm+'" ?','',
+    'เครื่องจะพักงาน โหลด APK แล้วติดตั้งทับตัวเอง',
+    'กลับมาทำงานเองใน ~90 วิ (เสียคลิปที่ทำค้าง 1 ตัว)','',
+    'ครั้งแรกของแต่ละเครื่อง ต้องเปิดสิทธิ์ "ติดตั้งแอปที่ไม่รู้จัก" ที่เครื่องนั้นก่อน',
+    'ถ้ายังไม่เปิด ระบบจะเด้งหน้านั้นขึ้นบนจอเครื่อง แล้วต้องมีคนไปกด'
+  ];
+  if(!confirm(lines.join(String.fromCharCode(10))))return;
+  // กดได้ครั้งเดียว: สองคำสั่งซ้อนกันทำให้ตัวติดตั้งสองรอบชนกัน แล้วการกดยืนยันของรอบหลัง
+  // ไปลงบนหน้าจอที่ dialog ปิดไปแล้ว = กดโดนอย่างอื่น (19 ส.ค. เครื่องค้างเพราะเรื่องนี้)
+  // แอปกันซ้ำอยู่อีกชั้นแล้ว แต่ปิดที่ปุ่มด้วยเพื่อให้คนเห็นว่า "กดไปแล้ว" ไม่ใช่กดไม่ติด
+  var b=document.getElementById('upd-'+id);
+  // แอปเก่ากว่า ver 8 = ไม่มีโค้ดรับคำสั่ง update อยู่ในเครื่องเลย ส่งไปก็ตกที่ "unknown action"
+  // แล้วเงียบ ไม่มีคำตอบกลับ — เหมือนเครื่องค้าง ทั้งที่มันแค่ไม่รู้จักคำสั่ง
+  // ครั้งแรกต้องลงมือเอง เพราะโค้ดที่ทำหน้าที่อัปเดตต้องอยู่บนเครื่องก่อน (ไก่กับไข่)
+  if((d.ver||1)<8){
+    updNote(id,'แอปเก่าเกินไป ยังอัปเดตจากเว็บไม่ได้ — ต้องเอา APK ไปลงที่เครื่องนี้เอง 1 ครั้งก่อน '+
+      '(หลังจากนั้นกดจากเว็บได้ตลอด)');
+    if(b){b.disabled=true;setTimeout(function(){b.disabled=!d.online;},4000);}
+    return;
+  }
+  if(b){b.disabled=true;b.dataset.busy='1';}
+  send({type:'update',deviceId:id});
+  updNote(id,'ส่งคำสั่งแล้ว — รอเครื่องตอบ…');
+}
+// ความคืบหน้าโชว์บน title ของปุ่มเท่านั้น — หน้านี้ไม่มีระบบ toast กลาง และช่องอื่นบนการ์ด
+// ถูกใช้อยู่แล้ว (st-<id> คือ "จำนวนคลิปในคลัง" เขียนทับจะทำเลขคลังหาย)
+function updNote(id,msg){
+  var b=document.getElementById('upd-'+id);
+  if(b)b.title='อัปเดต: '+msg;
+  var el=document.getElementById('updst-'+id);
+  if(!el)return;
+  el.textContent='อัปเดตแอป: '+msg;
+  el.className='updst on'+(/ล้ม|ไม่สำเร็จ|ออฟไลน์|ไม่ได้/.test(msg)?' err':'');
+  // "กำลังติดตั้ง" เป็นข้อความสุดท้ายที่ส่งทันเกือบทุกครั้ง — โปรเซสถูกแทนที่ก่อนจะส่งอะไรต่อ
+  // ถ้าไม่บอกไว้ คนจะคิดว่าค้าง ทั้งที่นั่นคือหน้าตาของความสำเร็จ
+  if(/กำลังติดตั้ง/.test(msg)){
+    el.textContent='อัปเดตแอป: กำลังติดตั้ง… เครื่องจะรีสตาร์ตเอง (~90 วิ) ระหว่างนี้จะหลุดจากเว็บชั่วคราว';
+  }
+}
+function onUpdateStat(m){ updNote(m.deviceId,m.msg||''); }
+
+// ── ดูจอเครื่อง ─────────────────────────────────────────────────────────────
+// ทำไมต้องมี: เวลาเครื่องเงียบไป ไม่มีทางรู้เลยว่ามันค้างอยู่หน้าไหน ถ้าไม่เดินไปดูหรือเสียบสาย
+// (19 ส.ค. เครื่อง กบเอง/หำน้อย นิ่งไป 92 นาที กับ 13 ชม. หลักฐานที่มีคือ lastDone อย่างเดียว)
+// ส่งเป็น type:'shot' ไม่ใช่ 'cmd' โดยตั้งใจ — cmd ทุกตัวจะล้างคิวคีย์เวิร์ดทิ้งที่ฝั่งเซิร์ฟเวอร์
+let shotDev=null,shotTimer=null;
+function openShot(id){
+  const d=devices.find(x=>x.deviceId===id);
+  shotDev=id;
+  document.getElementById('shotName').textContent=(d&&(d.name||d.model))||id.slice(0,8);
+  document.getElementById('shotOv').classList.add('open');
+  reqShot();
+}
+function closeShot(){document.getElementById('shotOv').classList.remove('open');shotDev=null;clearTimeout(shotTimer);}
+function reqShot(){
+  if(!shotDev)return;
+  const body=document.getElementById('shotBody');
+  const d=devices.find(x=>x.deviceId===shotDev);
+  // เครื่องแอปเก่าไม่รู้จัก action นี้ มันจะเงียบ แล้วเราจะไปขึ้นว่า "ไม่ตอบใน 15 วิ" ซึ่งอ่านแล้วเหมือน
+  // เครื่องค้าง — คนละเรื่องกับความจริง และเป็นอาการเดียวกับที่ปุ่มนี้มีไว้วินิจฉัยพอดี บอกไปตรง ๆ ดีกว่า
+  if(d&&(d.ver||1)<7){
+    body.innerHTML='<span style="opacity:.75;font-size:13px">แอปเก่า — อัปเดตแอปก่อนถึงจะดูจอได้<br>'+
+      '<span style="opacity:.6">(เครื่องยังทำงานปกติ แค่ยังไม่รู้จักคำสั่งนี้)</span></span>';
+    return;
+  }
+  if(d&&!d.online){
+    body.innerHTML='<span style="opacity:.75;font-size:13px">เครื่องออฟไลน์ — ดูจอไม่ได้</span>';
+    return;
+  }
+  body.innerHTML='<span style="opacity:.6;font-size:13px">กำลังขอภาพจากเครื่อง…</span>';
+  send({type:'shot',deviceId:shotDev});
+  clearTimeout(shotTimer);
+  // เครื่องที่ยุ่งจริง ๆ ตอบช้าได้ แต่ถ้าเกินนี้แปลว่าไม่ตอบ ไม่ใช่ช้า
+  shotTimer=setTimeout(()=>{
+    document.getElementById('shotBody').innerHTML='<span style="opacity:.7;font-size:13px">เครื่องไม่ตอบใน 15 วิ — อาจแอปค้างหรือหลุดการเชื่อมต่อ</span>';
+  },15000);
+}
+function onShot(m){
+  if(m.deviceId!==shotDev)return;
+  clearTimeout(shotTimer);
+  const body=document.getElementById('shotBody');
+  if(m.err||!m.img){
+    body.innerHTML='<span style="opacity:.7;font-size:13px">ขอภาพไม่ได้: '+esc(m.err||'ไม่มีข้อมูลภาพ')+'</span>';
+    return;
+  }
+  const t=new Date(m.at||Date.now());
+  const hh=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0');
+  body.innerHTML='<img src="data:image/jpeg;base64,'+m.img+'" alt="หน้าจอเครื่อง" '+
+    'style="max-width:100%;max-height:64vh;border-radius:10px;border:1px solid rgba(255,255,255,.12)">'+
+    '<div style="font-size:11.5px;opacity:.55;margin-top:6px">ถ่ายเมื่อ '+hh+' · '+Math.round(m.img.length*3/4/1024)+' KB</div>';
+}
+function openCfg(id){
+  const d=devices.find(x=>x.deviceId===id);if(!d)return;
+  cfgDev=id;cfgBase=null;
+  document.getElementById('cfgName').textContent=d.name||d.model||id.slice(0,8);
+  document.querySelectorAll('.cfg-f,.cfg-chk').forEach(e=>e.classList.remove('applied'));
+  // ล้างฟอร์มก่อนเสมอ — ไม่งั้นค่าของเครื่องที่เปิดครั้งก่อนค้างโชว์ แล้วดูเหมือน "ค่าของเครื่องนี้"
+  // (โดยเฉพาะเครื่องแอปเก่าที่ค่าจริงไม่มีวันมาแทนที่)
+  for(const[k,,t]of CFG_FIELDS){const el=document.getElementById('cf-'+k);if(t==='bool')el.checked=false;else el.value='';}
+  document.getElementById('cfgApply').disabled=true;
+  cfgNote('warn','กำลังโหลดค่าจากเครื่อง…');
+  document.getElementById('cfgOv').classList.add('open');
+  renderRot();renderSelectors();
+  send({type:'getsettings',deviceId:id});
+  clearTimeout(cfgTimer);
+  cfgTimer=setTimeout(()=>{if(!cfgBase)cfgNote('err','เครื่องไม่ตอบใน 10 วิ — แอปเก่าหรือหลุดการเชื่อมต่อ ตั้งในแอพแทน');},10000);
+}
+function closeCfg(){document.getElementById('cfgOv').classList.remove('open');cfgDev=null;clearTimeout(cfgTimer);}
+function onCfgMsg(m){
+  if(m.deviceId!==cfgDev)return;
+  clearTimeout(cfgTimer);
+  if(m.type==='settingserr'){
+    cfgNote('err',m.error==='oldapp'?'เครื่องนี้แอปเก่า — อัปเดตแอปก่อนถึงตั้งจากเว็บได้ (เครื่องยังใช้งานปกติ)':m.error==='offline'?'เครื่องออฟไลน์':'ส่งไม่สำเร็จ ('+m.error+')');
+    return;
+  }
+  fillCfg(m.settings||{});cfgBase=readCfg();
+  document.getElementById('cfgApply').disabled=false;
+  if(m.type==='settingsack'){
+    document.querySelectorAll('.cfg-f,.cfg-chk').forEach(e=>e.classList.remove('applied'));
+    for(const k of (m.applied||[]))
+      {const el=document.getElementById('cf-'+k);if(el)el.closest('.cfg-f,.cfg-chk').classList.add('applied');}
+    const sk=(m.skipped||[]).length?' · ข้าม: '+m.skipped.join(', '):'';
+    const ok='✓ เครื่องรับค่าแล้ว '+(m.applied||[]).length+' รายการ'+sk+(m.running?' · เครื่องกำลังรัน — มีผลรอบถัดไป':'');
+    // เครื่องเตือนกลับมาว่าค่าที่ตั้งใช้ไม่ได้จริง (เช่น จำนวนบัญชีเกินบัญชีที่ตั้งชื่อไว้) → ขึ้นเตือน ไม่ใช่ ✓ เฉย ๆ
+    if(m.warn)cfgNote('warn',ok+' · ⚠ '+m.warn);else cfgNote('ok',ok);
+  }else{
+    cfgNote(m.running?'warn':'ok',m.running?'เครื่องกำลังรันอยู่ — ตั้งได้เลย ค่าจะมีผลรอบถัดไป':'โหลดค่าจากเครื่องแล้ว');
+  }
+}
+function applyCfg(){
+  if(!cfgDev||!cfgBase)return;
+  const cur=readCfg(),diff={};
+  for(const k in cur)if(JSON.stringify(cur[k])!==JSON.stringify(cfgBase[k]))diff[k]=cur[k];
+  if(!Object.keys(diff).length){cfgNote('warn','ยังไม่ได้แก้อะไร');return;}
+  cfgNote('warn','กำลังส่ง '+Object.keys(diff).length+' รายการ…');
+  send({type:'applysettings',deviceId:cfgDev,settings:diff});
+  clearTimeout(cfgTimer);
+  cfgTimer=setTimeout(()=>cfgNote('err','เครื่องไม่ตอบรับใน 10 วิ — ลองใหม่'),10000);
+}
+function renderTplSel(){
+  const sel=document.getElementById('cfgTplSel'),cur=sel.value;
+  sel.innerHTML='<option value="">— เทมเพลต —</option>'+Object.keys(tplStore).sort().map(n=>`<option>${esc(n)}</option>`).join('');
+  sel.value=cur;
+  renderRot();
+}
+// วนเทมเพลตทุก ชม. — ตั้งต่อเครื่อง (ติ๊กเลือกชุด + เริ่ม/หยุด); server เป็นคนหมุนตอนต้นชั่วโมง
+function renderRot(){
+  if(!cfgDev)return;
+  const box=document.getElementById('rotList');if(!box)return;
+  const d=devices.find(x=>x.deviceId===cfgDev),r=(d&&d.rot)||{on:false,names:[],cur:''};
+  const names=Object.keys(tplStore).sort();
+  setHTML(box,names.length?names.map(n=>
+    `<label><input type="checkbox" value="${esc(n)}"${r.names.includes(n)?' checked':''}> ${esc(n)}</label>`).join('')
+    :'<span class="rt-none">ยังไม่มีเทมเพลต — บันทึกก่อน</span>');
+  document.getElementById('rotBtn').textContent=r.on?'หยุดวน':'เริ่มวน';
+  const st=document.getElementById('rotState');
+  st.textContent=r.on?('กำลังวน'+(r.cur?' · ตอนนี้ "'+r.cur+'"':'')):'ปิดอยู่';
+  st.className='rt-state'+(r.on?' on':'');
+}
+function toggleRot(){
+  if(!cfgDev)return;
+  const d=devices.find(x=>x.deviceId===cfgDev),r=(d&&d.rot)||{on:false};
+  const names=[...document.querySelectorAll('#rotList input:checked')].map(i=>i.value);
+  if(!r.on&&!names.length){cfgNote('warn','ติ๊กเลือกเทมเพลตที่จะวนก่อน');return;}
+  send({type:'setrotation',deviceId:cfgDev,names,on:!r.on});
+}
+function rotateNow(){if(cfgDev)send({type:'rotatenow',deviceId:cfgDev});}
+
+// ---- Remote selectors (fleet v4) ----
+// ค่ามาจาก selector-presets.json บนเซิร์ฟ (คนดูแลโค้ดเช็ค+deploy) — หน้าเว็บ "พิมพ์เองไม่ได้"
+// มีแค่ปุ่มกดส่งค่านี้เข้าเครื่อง กันใส่ค่ามั่วแล้วพังทั้งฝูง. เครื่องต้อง ver>=4 + มี fallback hardcode
+let selPresets={};
+function renderSelectors(){
+  if(!cfgDev)return;
+  renderSelFails();   // ต้องมาก่อน guard ver>=4 ข้างล่าง — เครื่องแอปเก่าก็ต้องเห็นล็อก
+  const box=document.getElementById('selBox'),list=document.getElementById('selList');if(!box)return;
+  const d=devices.find(x=>x.deviceId===cfgDev),ok=d&&(d.ver||1)>=4;
+  box.style.display=ok?'':'none';
+  document.getElementById('selState').textContent=ok?'':'แอปเก่า ไม่รองรับ';
+  if(!ok)return;
+  // ค่าปัจจุบันบนเครื่อง (จาก status) เทียบกับ preset บนเซิร์ฟ — read-only ทั้งคู่
+  const onDev=(()=>{try{return JSON.parse((d.status&&d.status.selectorOverrides)||'{}');}catch{return{};}})();
+  const keys=Object.keys(selPresets);
+  setHTML(list,keys.length?keys.map(k=>{
+    const srv=selPresets[k],dev=onDev[k]||'(default ในแอป)';
+    const same=srv===onDev[k];
+    return `<div class="cfg-f wide" style="opacity:.95"><span>${esc(k)}</span>`+
+      `<div style="font-size:12px;display:flex;gap:12px"><span>เซิร์ฟ: <b>${esc(srv)}</b></span>`+
+      `<span style="opacity:.6">เครื่อง: ${esc(dev)} ${same?'✓':'⟳'}</span></div></div>`;
+  }).join(''):'<div class="rt-none">ยังไม่มี preset บนเซิร์ฟ</div>');
+}
+// การ์ดโชว์เฉพาะตัวที่ยังไม่หาย ส่วนที่หายไปแล้วมาดูย้อนหลังที่นี่
+function renderSelFails(){
+  if(!cfgDev)return;
+  const box=document.getElementById('sfList');if(!box)return;
+  const d=devices.find(x=>x.deviceId===cfgDev),list=(d&&d.selfails)||[];
+  document.getElementById('sfState').textContent=list.length?list.length+' ครั้ง':'ไม่มี';
+  setHTML(box,list.length?list.map(f=>
+    `<div class="sf-row"><span class="sf-t">${new Date(f.ts).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>`+
+    `<b>${esc(f.key)}</b><div class="sf-mk">จอมี: ${esc((f.markers||[]).join(' · '))||'—'}</div></div>`).join('')
+    :'<div class="rt-none">ยังไม่เคยพลาด</div>');
+}
+function applySelectors(){   // ปุ่ม "ส่ง preset เข้าเครื่อง" — ไม่ส่งค่า, เซิร์ฟใช้ค่าจากไฟล์เอง
+  if(!cfgDev)return;
+  send({type:'pushselectors',deviceId:cfgDev});
+  cfgNote('warn','กำลังส่ง selector ล่าสุดจากเซิร์ฟเข้าเครื่อง…');
+}
+function useTpl(){const n=document.getElementById('cfgTplSel').value;if(!n||!tplStore[n])return;
+  // จำนวนบัญชีหมุนโพส = ค่าของเครื่อง ไม่ใช่ของเทมเพลต (แต่ละเครื่องล็อกอินไม่เท่ากัน) → ไม่เติมทับ
+  // ชื่อบัญชีก็เหมือน postAccountCount — เป็นของเครื่อง ไม่ใช่ของเทมเพลต (เทมเพลตที่เซฟไว้ก่อน
+  // แพตช์นี้อาจมีชื่อบัญชีของเครื่องอื่นติดมา ตัดทิ้งตรงนี้อีกชั้น)
+  const s={...(tplStore[n].settings||{})};delete s.postAccountCount;
+  for(const k of ['accountName1','accountName2','accountName3',
+                  'accountEnabled1','accountEnabled2','accountEnabled3'])delete s[k];
+  fillCfg(s);cfgNote('warn','เติมค่าจากเทมเพลต "'+n+'" แล้ว — ยังไม่ส่ง กด "ส่งไปเครื่อง" เพื่อ apply');}
+function saveTpl(){const n=prompt('ตั้งชื่อเทมเพลต (ค่าที่อยู่ในฟอร์มตอนนี้)');if(!n||!n.trim())return;
+  send({type:'savetemplate',name:n.trim(),settings:readCfg()});cfgNote('ok','บันทึกเทมเพลต "'+n.trim()+'" แล้ว');}
+function delTpl(){const n=document.getElementById('cfgTplSel').value;if(!n)return;
+  if(confirm('ลบเทมเพลต "'+n+'" ?'))send({type:'deletetemplate',name:n});}
+
+// ===== ticker ราคาวิ่งล่างจอ =====
+const COINS=[['pax-gold','XAU/USD'],['bitcoin','BTC/USD'],['ethereum','ETH/USD'],['binancecoin','BNB/USD'],['solana','SOL/USD'],['ripple','XRP/USD'],['dogecoin','DOGE/USD'],['cardano','ADA/USD'],['avalanche-2','AVAX/USD'],['chainlink','LINK/USD']];
+const SEED={'XAU/USD':[4010.26,-2.45],'BTC/USD':[62770,0.82],'ETH/USD':[1674.49,1.09],'BNB/USD':[577.75,0.76],'SOL/USD':[69.66,0.86],'XRP/USD':[1.092,-0.97],'DOGE/USD':[0.078792,-0.81],'ADA/USD':[0.148412,-2.14],'AVAX/USD':[6.42,2.7],'LINK/USD':[7.6,0.19]};
+// ===== ตรวจราคาขยับแรงในไม่กี่นาที (CoinGecko ไม่มีค่า short-term ให้ → เก็บ history เองทุก 15 วิ) =====
+const FLAME='<svg class="tk-flame" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>';
+const HOT_WINDOW_MS=180000, MIN_SPAN_MS=90000, HOT_THRESHOLD=0.8;  // ขยับ ≥0.8% ภายใน ~3 นาที = ร้อน
+const hist={};
+function shortMove(sym,price){
+  if(price==null||isNaN(price))return 0;
+  const now=Date.now(), arr=hist[sym]||(hist[sym]=[]);
+  arr.push({t:now,p:+price});
+  while(arr.length>1 && now-arr[0].t>HOT_WINDOW_MS) arr.shift();
+  if(now-arr[0].t<MIN_SPAN_MS || !arr[0].p) return 0;   // ยังเก็บข้อมูลไม่พอ (ต่ำกว่า ~1.5 นาที)
+  return (price-arr[0].p)/arr[0].p*100;
+}
+function fmtPx(p){if(p==null||isNaN(p))return'—';if(p>=1000)return(+p).toLocaleString('en-US',{maximumFractionDigits:0});if(p>=1)return(+p).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});return(+p).toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:6});}
+function setTicker(items){
+  const seg=items.map(it=>{
+    const up=it.chg>=0,a=up?'▲':'▼',c=up?'up':'down';
+    const hot=it.hot||0, isHot=Math.abs(hot)>=HOT_THRESHOLD, hc=isHot?(hot>0?' hot-up':' hot-down'):'';
+    const fire=isHot?`${FLAME}<span class="tk-hot">${hot>0?'+':''}${hot.toFixed(1)}%</span>`:'';
+    return `<span class="tk-item${hc}"><span class="tk-sym">${it.sym}</span><span class="tk-px">${fmtPx(it.price)}</span><span class="tk-ch ${c}">${a}${Math.abs(it.chg).toFixed(2)}%</span>${fire}</span><span class="tk-dot">•</span>`;}).join('');
+  const t=document.getElementById('tkTrack'); if(t)t.innerHTML=seg+seg;
+}
+async function loadPrices(){
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+COINS.map(c=>c[0]).join(',')+'&vs_currencies=usd&include_24hr_change=true',{cache:'no-store'});
+    if(!r.ok)return;
+    const d=await r.json();
+    const items=COINS.map(([id,sym])=>{const price=(d[id]||{}).usd;return {sym,price,chg:+(((d[id]||{}).usd_24h_change)||0),hot:shortMove(sym,price)};}).filter(x=>x.price!=null);
+    if(items.length)setTicker(items);
+  }catch(e){}
+}
+setTicker(COINS.map(([id,sym])=>({sym,price:SEED[sym][0],chg:SEED[sym][1]})));
+// ปิด/เปิดแถบราคา — จำต่อเบราว์เซอร์ (localStorage) และปิดอยู่ = ไม่ยิง coingecko ทุก 15 วิเปล่า ๆ
+let tkTimer=null;
+function setTickerOn(on){
+  document.body.classList.toggle('no-ticker',!on);
+  document.getElementById('tkBtn').style.display=on?'none':'';
+  try{localStorage.setItem('fleetTicker',on?'1':'0');}catch(e){}
+  clearInterval(tkTimer);tkTimer=null;
+  if(on){loadPrices();tkTimer=setInterval(loadPrices,15000);}
+}
+setTickerOn((()=>{try{return localStorage.getItem('fleetTicker')!=='0';}catch(e){return true;}})());
+
+// ===== พื้นหลัง: ปิด → matrix → ดาว =====
+const fx=document.getElementById('fx'), fctx=fx.getContext('2d');
+const FX_MODES=['off','matrix','stars'], FX_TITLE={off:'พื้นหลัง: ปิด',matrix:'พื้นหลัง: Matrix',stars:'พื้นหลัง: ดาววิ่ง'};
+let fxMode=localStorage.getItem('fleetFx')||'off', fxRAF=0, cols=[], stars=[], lastFrame=0;
+const GLYPHS='01ｱｲｳｴｵｶｷｸｹｺｻｼｽﾀﾁﾂﾃﾅﾆﾇﾐﾑﾒ0123456789ABCDEF';
+function fxResize(){
+  fx.width=innerWidth; fx.height=innerHeight;
+  cols=Array.from({length:Math.ceil(fx.width/16)+1},()=>Math.random()*-60);
+  stars=Array.from({length:Math.round(fx.width/7)},()=>({x:Math.random()*fx.width,y:Math.random()*fx.height,z:Math.random()}));
+  if(fxMode!=='off')fctx.clearRect(0,0,fx.width,fx.height);
+}
+function drawMatrix(){
+  fctx.fillStyle='rgba(12,14,18,0.09)'; fctx.fillRect(0,0,fx.width,fx.height);
+  fctx.font='16px monospace';
+  for(let i=0;i<cols.length;i++){
+    const c=GLYPHS[Math.floor(Math.random()*GLYPHS.length)], x=i*16, y=cols[i]*16;
+    fctx.fillStyle='rgba(110,106,246,0.85)'; fctx.fillText(c,x,y);
+    fctx.fillStyle='rgba(110,106,246,0.30)'; fctx.fillText(c,x,y-16);
+    if(y>fx.height && Math.random()>0.975) cols[i]=0; else cols[i]++;
+  }
+}
+function drawStars(){
+  fctx.fillStyle='rgba(12,14,18,0.34)'; fctx.fillRect(0,0,fx.width,fx.height);
+  for(const s of stars){
+    s.x-=0.5+s.z*2.4; if(s.x<0){s.x=fx.width;s.y=Math.random()*fx.height;}
+    const r=s.z*1.7+0.4;
+    fctx.fillStyle=`rgba(155,152,255,${0.2+s.z*0.5})`;
+    fctx.fillRect(s.x,s.y,r,r);
+  }
+}
+function fxLoop(t){
+  if(fxMode==='off'){fxRAF=0;return;}
+  fxRAF=requestAnimationFrame(fxLoop);
+  if(document.hidden)return;
+  if(fxMode==='matrix'){ if(t-lastFrame<45)return; lastFrame=t; drawMatrix(); }
+  else drawStars();
+}
+function applyFx(){
+  document.getElementById('fxBtn').title=FX_TITLE[fxMode];
+  fctx.clearRect(0,0,fx.width,fx.height);
+  if(!fxRAF && fxMode!=='off'){ lastFrame=0; fxRAF=requestAnimationFrame(fxLoop); }
+}
+function cycleFx(){ fxMode=FX_MODES[(FX_MODES.indexOf(fxMode)+1)%FX_MODES.length]; localStorage.setItem('fleetFx',fxMode); applyFx(); }
+addEventListener('resize',fxResize);
+fxResize(); applyFx();
+
+// ===== 📦 คลังยังไม่โพส (fleet v6) =====
+// เครื่องส่ง status.stock (จำนวนจริงทั้งหมด) + status.stockItems (รายการแรก ๆ, เรียงเก่าสุดก่อน =
+// ลำดับที่จะถูกโพสจริง) มาทุก heartbeat อยู่แล้ว — ที่นี่แค่เอามาโชว์ ไม่ต้องถามเครื่องเพิ่ม
+// เลยไม่มีสถานะ "กำลังโหลด" และเปิดดูตอนเครื่องออฟไลน์ก็ยังเห็นค่าล่าสุดที่มันรายงานไว้
+let stockDev=null;
+document.body.insertAdjacentHTML('beforeend',`
+<style>
+.stk-list{max-height:52vh;overflow:auto;margin-top:6px}
+.stk-row{display:flex;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px}
+.stk-row:last-child{border-bottom:0}
+.stk-n{width:22px;text-align:right;opacity:.45;font-variant-numeric:tabular-nums}
+.stk-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stk-kw{font-size:11px;opacity:.55}
+.stk-age{opacity:.5;font-size:11.5px;white-space:nowrap}
+.stk-warn{color:#ffb4a2;font-size:11px;white-space:nowrap}
+.stk-none{opacity:.55;font-size:13px;padding:14px 2px}
+.stk-more{opacity:.55;font-size:12px;padding:8px 2px}
+</style>
+<div class="cfg-ov" id="stockOv" onclick="if(event.target===this)closeStock()">
+  <div class="cfg-md">
+    <h3>📦 คลังยังไม่โพส <span id="stockName"></span></h3>
+    <div class="sub">คลิปที่เจนเสร็จแล้วแต่ยังไม่ได้ลง Shopee · เรียงเก่าสุดก่อน (ลำดับที่เครื่องจะโพสจริง)</div>
+    <div class="stk-list" id="stockList"></div>
+    <div class="cfg-acts"><button class="btn btn--ghost" onclick="closeStock()">ปิด</button></div>
+  </div>
+</div>`);
+function openStock(id){
+  stockDev=id;
+  const d=devices.find(x=>x.deviceId===id);
+  document.getElementById('stockName').textContent=d?(d.name||d.model||id.slice(0,8)):'';
+  document.getElementById('stockOv').classList.add('open');
+  renderStock();
+}
+function closeStock(){document.getElementById('stockOv').classList.remove('open');stockDev=null;}
+function renderStock(){
+  const d=devices.find(x=>x.deviceId===stockDev);const box=document.getElementById('stockList');
+  if(!box)return;
+  const st=(d&&d.status)||{}, items=Array.isArray(st.stockItems)?st.stockItems:[], total=st.stock||0;
+  if(!total){box.innerHTML='<div class="stk-none">คลังว่าง — ยังไม่มีคลิปที่รอโพส</div>';return;}
+  box.innerHTML=items.map((it,i)=>
+    `<div class="stk-row"><span class="stk-n">${i+1}</span>`+
+    `<span class="stk-name">${esc(it.n)||'<i>ไม่มีชื่อสินค้า</i>'}`+
+    (it.k?`<br><span class="stk-kw">${esc(it.k)}</span>`:'')+`</span>`+
+    // ไม่มีลิงก์ affiliate = โพสไม่ได้ ค้างในคลังไปเรื่อย ๆ — ต้องเห็นจากเว็บ ไม่ใช่มานั่งเดาว่าทำไมเลขไม่ลด
+    (it.p===false?`<span class="stk-warn">ไม่มีลิงก์ — โพสไม่ได้</span>`:'')+
+    `<span class="stk-age">${ago(it.t)}</span></div>`).join('')+
+    (total>items.length?`<div class="stk-more">…และอีก ${total-items.length} คลิป (เครื่องส่งมาแค่ ${items.length} รายการแรก)</div>`:'');
+}
+
+// ===== ยอด Affiliate รายบัญชี =====
+// เซิร์ฟจดประวัติไว้ใน data/affstats.json แล้วส่ง {type:'aff'} มาตอนเปิดหน้า + ทุกครั้งที่เครื่องอ่านยอดใหม่ได้.
+// ตัวเลขมาเป็นสตริงแบบที่ Shopee โชว์ ("3.7พัน") → ยอดรวมเป็นค่าประมาณ (ขึ้น ≈)
+let affAccounts={}, affOpen={}, affDevs={}, affProducts=null;
+const affNarrow=matchMedia('(max-width:640px)');
+affNarrow.addEventListener('change',()=>renderAff());
+document.body.insertAdjacentHTML('beforeend',`
+<style>
+.aff-month{margin-left:auto;font-weight:500;color:var(--faint);font-size:12px}
+.aff-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.aff-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:999px;background:var(--surface2);color:var(--muted)}
+.aff-chip.ok{background:var(--ok-soft);color:var(--ok)} .aff-chip.warn{background:var(--warn-soft);color:var(--warn)} .aff-chip.bad{background:var(--danger-soft);color:var(--danger)}
+.aff-chip i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.aff-all{margin-left:auto;background:var(--accent-soft);color:var(--accent2);border:none;border-radius:9px;padding:0 14px;height:36px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit}
+.aff-all:disabled{opacity:.35;cursor:not-allowed}
+.aff-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:12px}
+.aff-tile{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.aff-tile .k{font-size:12px;color:var(--muted)}
+.aff-tile .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:4px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.aff-tile .s{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.aff-tile .s b{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
+.aff-tile.hl .v{color:var(--ok)}
+.aff-pct{font-size:12px;font-weight:600;padding:2px 7px;border-radius:6px}
+.aff-pct.up{background:var(--ok-soft);color:var(--ok)} .aff-pct.dn{background:var(--danger-soft);color:var(--danger)}
+.aff-note{font-size:12.5px;border-radius:9px;padding:0 10px;margin-bottom:8px;display:none}
+.aff-note.ok{display:block;padding:7px 10px;background:var(--ok-soft);color:var(--ok)}
+.aff-note.err{display:block;padding:7px 10px;background:var(--danger-soft);color:var(--danger)}
+.aff-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:stretch}
+.aff-card{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:12px 0 4px;min-width:0;display:flex;flex-direction:column}
+.aff-card.wide{flex:999 1 520px} .aff-card.side{flex:1 1 320px} .aff-card.half{flex:1 1 400px}
+.aff-card h4{margin:0 14px 8px;font-size:13px;font-weight:600;display:flex;align-items:baseline;gap:8px}
+.aff-card h4 span{margin-left:auto;font-weight:400;font-size:11.5px;color:var(--faint)}
+.aff-card .foot{font-size:11.5px;color:var(--muted);padding:8px 14px 10px;line-height:1.55}
+.aff-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.aff-tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.aff-tbl th{font-size:11px;font-weight:600;color:var(--faint);text-align:right;padding:6px 10px;white-space:nowrap}
+.aff-tbl td{padding:9px 10px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:top}
+.aff-tbl th:first-child,.aff-tbl td:first-child{text-align:left;padding-left:14px}
+.aff-tbl th:last-child,.aff-tbl td:last-child{padding-right:14px}
+.aff-tbl .sub{display:block;font-size:11px;color:var(--faint);font-weight:400}
+.aff-tbl .sub.bad{color:var(--danger)} .aff-tbl .sub.warn{color:var(--warn)}
+.aff-tbl tr.tot td{background:var(--surface);font-weight:650}
+.aff-main .aff-tbl{min-width:820px}
+.aff-main .aff-tbl td:first-child{position:sticky;left:0;background:var(--surface);z-index:1}
+.aff-main{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 0 4px}
+.aff-main h4{margin:0 14px 8px;font-size:13px;font-weight:600}
+.aff-tbl tr.acc-r{cursor:pointer}
+.aff-tbl tr.acc-r:hover td{background:var(--surface2)}
+.aff-nm{font-weight:600}
+.aff-nm .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--faint);margin-right:6px;vertical-align:1px}
+.aff-nm .dot.on{background:var(--ok)} .aff-nm .dot.bad{background:var(--danger)}
+.aff-comm{color:var(--ok);font-weight:600}
+.aff-age{font-size:11.5px;color:var(--muted)}
+.aff-age.warn{color:var(--warn)} .aff-age.bad{color:var(--danger)}
+.aff-err{display:block;font-size:11px;color:var(--danger);white-space:normal;max-width:220px;text-align:right;margin-left:auto}
+.aff-none{color:var(--faint)}
+.aff-rf{background:var(--accent-soft);color:var(--accent2);border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+.aff-rf:disabled{opacity:.35;cursor:not-allowed}
+.aff-bar{display:inline-flex;width:54px;height:6px;border-radius:999px;background:var(--line);overflow:hidden;vertical-align:middle;margin-left:8px}
+.aff-bar i{background:var(--accent)}
+.aff-al{display:flex;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.aff-al:first-of-type{border-top:0}
+.aff-al>i{flex:0 0 auto;width:8px;height:8px;border-radius:50%;margin-top:6px}
+.aff-al b{display:block;font-size:13px;font-weight:600;line-height:1.45}
+.aff-al p{margin:2px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
+.aff-ok-none{padding:10px 14px;font-size:12.5px;color:var(--ok)}
+.aff-hist td{background:var(--bg);text-align:left;white-space:normal}
+.aff-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;padding:4px 0}
+.aff-days div{background:var(--surface2);border-radius:8px;padding:6px 8px;font-size:11.5px;color:var(--muted)}
+.aff-days div b{display:block;color:var(--ok);font-size:13px;font-variant-numeric:tabular-nums}
+@media (max-width:640px){
+  .aff-main .aff-tbl{min-width:0}
+  .aff-tbl .opt{display:none}
+  .aff-tbl td,.aff-tbl th{padding-left:6px;padding-right:6px}
+  .aff-upd{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:4px}
+  .aff-upd .aff-err{text-align:left;margin-left:0;max-width:130px}
+  .aff-rf{padding:3px 8px}
+  .aff-tile .v{font-size:20px}
+  .aff-all{margin-left:0}
+}
+</style>`);
+// "3.7พัน" → 3700, "1.2หมื่น" → 12000, "2.5k" → 2500, "1,234" → 1234 ; อ่านไม่ออก → NaN
+function affNum(s){
+  s=String(s??'').replace(/[,฿\s]/g,'');if(!s)return NaN;
+  const m=/^(-?[\d.]+)(พัน|หมื่น|แสน|ล้าน|k|K|m|M)?$/.exec(s);if(!m)return NaN;
+  const mul={'พัน':1e3,'หมื่น':1e4,'แสน':1e5,'ล้าน':1e6,k:1e3,K:1e3,m:1e6,M:1e6}[m[2]]||1;
+  return parseFloat(m[1])*mul;
+}
+const affN=s=>{const n=affNum(s);return isNaN(n)?0:n;};
+const affFmt=(n,money)=>isNaN(n)?'—':(money?'฿':'')+(n>=100000?(n/1000).toLocaleString('en-US',{maximumFractionDigits:1})+'k':n.toLocaleString('en-US',{maximumFractionDigits:money&&n<1000?1:0}));
+const affPct=(a,b,dg=1)=>b>0?(a/b*100).toLocaleString('en-US',{maximumFractionDigits:dg})+'%':'—';
+const bkkToday=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
+const dayDiff=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+const thDate=d=>{const [y,m,dd]=d.split('-');return `${+dd}/${+m}`;};
+const TH_MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const thMonth=k=>`${TH_MON[+k.slice(5)-1]} ${k.slice(0,4)}`;
+const monShift=(k,n)=>{const d=new Date(Date.UTC(+k.slice(0,4),+k.slice(5)-1+n,1));return d.toISOString().slice(0,7);};
+const monDays=k=>new Date(Date.UTC(+k.slice(0,4),+k.slice(5),0)).getUTCDate();
+const affAgo=t=>{const h=(Date.now()-t)/36e5;return h<48?ago(t)+' ที่แล้ว':Math.floor(h/24)+' วันที่แล้ว';};
+const affHrs=t=>t?(Date.now()-t)/36e5:Infinity;
+// วันสุดท้ายที่ยอดสะสมของเดือนนับถึง: จาก range "01-10-2026 - 07-10-2026" → 7 (ไม่มี range = null)
+function affEndDay(mo){
+  const m=/(\d{1,2})-(\d{1,2})-(\d{4})\s*$/.exec(String(mo&&mo.range||''));
+  return m?+m[1]:null;
+}
+// ชื่อเครื่อง: เครื่องที่ต่ออยู่ใช้ข้อมูลสด, ที่ไม่ได้ต่อใช้ชื่อที่เซิร์ฟจำไว้ (ส่งมากับ 'aff')
+function affDevInfo(id){
+  const live=devices.find(x=>x.deviceId===id), mem=affDevs[id]||{};
+  return {id,live,online:!!(live&&live.online),
+    name:(live&&(live.name||live.model))||mem.name||('เครื่อง '+String(id||'').slice(0,6)),
+    posted:(live&&live.posted!=null)?live.posted:(mem.posted||0)};
+}
+function affCanRefresh(dev,active){return !!(dev&&dev.online&&active&&!(dev.status&&dev.status.running)&&dev.a11y);}
+
+// ประมวลผลทั้งหมดที่หน้านี้ต้องใช้ในที่เดียว — render แยกส่วนอ่านจากตรงนี้
+function affModel(){
+  const names=Object.keys(affAccounts), today=bkkToday();
+  let cur='';
+  for(const n of names)for(const k of Object.keys(affAccounts[n].months||{}))if(k>cur)cur=k;
+  const months=cur?[cur,monShift(cur,-1),monShift(cur,-2)]:[];
+  const accs=names.map(n=>{
+    const r=affAccounts[n], days=Object.keys(r.days||{}).sort(), lastDay=days[days.length-1]||'';
+    const dev=affDevInfo(r.dev);
+    const accNow=dev.live&&Array.isArray(dev.live.acc)?dev.live.acc.find(a=>a.name===n):null;
+    const mo=cur&&r.months?r.months[cur]:null;
+    const m={comm:affN(mo&&mo.comm),sales:affN(mo&&mo.sales),orders:affN(mo&&mo.orders),clicks:affN(mo&&mo.clicks)};
+    const end=mo?(affEndDay(mo)||(lastDay.startsWith(cur)?+lastDay.slice(8):null)):null;
+    let allComm=0;for(const k in (r.months||{}))allComm+=affN(r.months[k].comm);
+    return {n,r,days,lastDay,dev,active:!!(accNow&&accNow.active),mo,m,end,allComm,hrs:affHrs(r.lastAt)};
+  });
+  const tot={comm:0,sales:0,orders:0,clicks:0};let proj=0,nCur=0;
+  const dim=cur?monDays(cur):30;
+  for(const a of accs)if(a.mo){nCur++;for(const k in tot)tot[k]+=a.m[k];proj+=a.end?a.m.comm/a.end*dim:a.m.comm;}
+  const prevK=months[1], prev={comm:0,sales:0,orders:0,clicks:0};let nPrev=0;
+  for(const a of accs){const mo=prevK&&a.r.months&&a.r.months[prevK];if(mo){nPrev++;for(const k in prev)prev[k]+=affN(mo[k]);}}
+  // ยอดเดือนที่ "ตรงกันทุกช่อง" ระหว่างสองบัญชี = น่าจะอ่านยอดซ้ำมาจากอีกบัญชี
+  const dup={};
+  for(const k of months)for(let i=0;i<accs.length;i++)for(let j=i+1;j<accs.length;j++){
+    const x=accs[i].r.months&&accs[i].r.months[k], y=accs[j].r.months&&accs[j].r.months[k];
+    if(!x||!y||!(affN(x.clicks)>0))continue;
+    if(['clicks','orders','sold','sales','comm','buyers'].every(f=>String(x[f])===String(y[f]))){
+      (dup[k]=dup[k]||{})[accs[j].n]=accs[i].n;
+    }
+  }
+  // แยกตามเครื่อง
+  const devMap=new Map();
+  for(const a of accs){
+    const g=devMap.get(a.r.dev)||{dev:a.dev,accs:[],comm:0,allComm:0,clicks:0,newest:0};
+    g.accs.push(a);g.comm+=a.m.comm;g.allComm+=a.allComm;g.clicks+=a.m.clicks;g.newest=Math.max(g.newest,a.r.lastAt||0);
+    devMap.set(a.r.dev,g);
+  }
+  const devs=[...devMap.values()].sort((a,b)=>b.comm-a.comm);
+  accs.sort((a,b)=>b.m.comm-a.m.comm||a.n.localeCompare(b.n));
+  return {today,cur,months,accs,tot,proj,nCur,dim,prevK,prev,nPrev,dup,devs};
+}
+
+function affAlerts(M){
+  const out=[];
+  for(const g of M.devs){
+    const days=g.newest?Math.floor(affHrs(g.newest)/24):null;
+    if(!g.dev.online&&(days==null||days>=1))
+      out.push({c:'bad',t:`เครื่อง ${g.dev.name} ไม่ได้ต่อ${days?` · ไม่มียอดใหม่ ${days} วัน`:''}`,
+        b:`${g.accs.map(a=>a.n).join(', ')} — เดือนนี้ได้รวม ${affFmt(g.comm,1)}`});
+  }
+  const stale=M.accs.filter(a=>a.dev.online&&a.hrs>48);
+  if(stale.length)out.push({c:'warn',t:`ยอดเก่าเกิน 2 วัน ${stale.length} บัญชี`,b:`${stale.map(a=>a.n).join(', ')} — สลับไปบัญชีนั้นแล้วกด ↻ เพื่ออ่านยอดใหม่`});
+  const errs=M.accs.filter(a=>a.r.err);
+  if(errs.length)out.push({c:'bad',t:`อ่านยอดไม่สำเร็จ ${errs.length} บัญชี`,b:errs.map(a=>`${a.n}: ${a.r.err.msg}`).join(' · ')});
+  if(M.tot.comm>0)for(const g of M.devs){
+    const share=g.comm/M.tot.comm;
+    if(g.dev.posted>=200&&share<0.05)
+      out.push({c:'warn',t:`${g.dev.name} โพสต์ไป ${g.dev.posted.toLocaleString('en-US')} คลิป แต่เดือนนี้ได้ ${affFmt(g.comm,1)}`,
+        b:`${g.accs.length} บัญชีมีคลิกรวม ${g.clicks.toLocaleString('en-US')} ในเดือนนี้ — คนเห็นคลิปน้อย ควรตรวจบัญชี/หมวดสินค้า`});
+  }
+  for(const a of M.accs)if(a.mo&&a.m.clicks>=50&&a.m.orders===0)
+    out.push({c:'warn',t:`${a.n} มี ${a.m.clicks.toLocaleString('en-US')} คลิก แต่ 0 ออเดอร์`,b:'คนกดแต่ไม่ซื้อ — ลองเปลี่ยนหมวดสินค้า/คีย์เวิร์ดของบัญชีนี้'});
+  if(M.devs.length>=2&&M.tot.comm>0&&M.devs[0].comm/M.tot.comm>=0.8)
+    out.push({c:'info',t:`รายได้ ${affPct(M.devs[0].comm,M.tot.comm,0)} มาจากเครื่องเดียว (${M.devs[0].dev.name})`,b:'ถ้าเครื่องนี้ดับหรือบัญชีโดนจำกัด รายได้หายเกือบทั้งหมด — ควรดันเครื่องอื่นขึ้นมา'});
+  for(const k in M.dup)for(const b in M.dup[k])
+    out.push({c:'warn',t:`ยอด ${thMonth(k)} ของ ${b} ตรงกับ ${M.dup[k][b]} ทุกช่อง`,b:'น่าจะอ่านยอดซ้ำมาจากอีกบัญชี — ตัวเลขรวมของเดือนนั้นอาจเกินจริง'});
+  return out;
+}
+
+function renderAff(){
+  const board=document.getElementById('affBoard');if(!board)return;
+  if(!Object.keys(affAccounts).length){board.style.display='none';return;}
+  board.style.display='block';
+  const M=affModel(), narrow=affNarrow.matches;
+  document.getElementById('affMonth').textContent=M.cur?`${thMonth(M.cur)} · ${M.accs.length} บัญชี · ${M.devs.length} เครื่อง`:'';
+
+  // ---- ความสดของข้อมูล + ดึงยอดทุกเครื่อง
+  const newest=Math.max(0,...M.accs.map(a=>a.r.lastAt||0));
+  const nStale=M.accs.filter(a=>a.hrs>48).length;
+  const canAll=M.devs.filter(g=>g.accs.some(a=>affCanRefresh(g.dev.live,a.active))).length;
+  setHTML(document.getElementById('affHead'),
+    (newest?`<span class="aff-chip ${affHrs(newest)>24?'warn':'ok'}"><i></i>ยอดล่าสุด ${affAgo(newest)}</span>`:'')+
+    (nStale?`<span class="aff-chip warn">${nStale} บัญชีไม่ได้อัปเดตเกิน 2 วัน</span>`:'')+
+    `<button class="aff-all" ${canAll?'':'disabled'} title="สั่งทุกเครื่องที่ว่างอยู่ให้อ่านยอดของบัญชีที่เปิดอยู่" onclick="affRefreshAll()">↻ ดึงยอดทุกเครื่อง${canAll?` (${canAll})`:''}</button>`);
+
+  // ---- ตัวเลขหลัก
+  const T=M.tot, P=M.prev, avg=M.proj/M.dim, pAvg=M.prevK?P.comm/monDays(M.prevK):0;
+  const chg=(a,b)=>b>0?`<span class="aff-pct ${a>=b?'up':'dn'}">${a>=b?'+':''}${Math.round((a/b-1)*100)}%</span>`:'';
+  setHTML(document.getElementById('affTiles'),M.cur?
+    `<div class="aff-tile hl"><div class="k">ค่าคอมเดือนนี้</div><div class="v">≈ ${affFmt(T.comm,1)}</div>`+
+      `<div class="s">จากยอดขาย <b>${affFmt(T.sales,1)}</b> · เรท <b>${affPct(T.comm,T.sales)}</b></div></div>`+
+    `<div class="aff-tile"><div class="k">คาดการณ์ทั้งเดือน</div><div class="v">≈ ${affFmt(Math.round(M.proj/100)*100,1)} ${chg(M.proj,P.comm)}</div>`+
+      `<div class="s">${M.nPrev?`${thMonth(M.prevK)} ทั้งเดือน <b>${affFmt(P.comm,1)}</b> · `:''}คิดจากอัตราต่อวันของแต่ละบัญชี</div></div>`+
+    `<div class="aff-tile"><div class="k">ค่าคอมเฉลี่ยต่อวัน</div><div class="v">${affFmt(Math.round(avg),1)} ${chg(avg,pAvg)}</div>`+
+      `<div class="s">${M.nPrev?`${thMonth(M.prevK)} เฉลี่ย <b>${affFmt(Math.round(pAvg),1)}</b>/วัน`:'ยังไม่มีเดือนก่อนให้เทียบ'}</div></div>`+
+    `<div class="aff-tile"><div class="k">คลิก → ออเดอร์</div><div class="v">${affPct(T.orders,T.clicks)}</div>`+
+      `<div class="s"><b>${affFmt(T.clicks)}</b> คลิก · <b>${affFmt(T.orders)}</b> ออเดอร์ · <b>${T.orders?affFmt(T.comm/T.orders,1):'—'}</b>/ออเดอร์</div></div>`:'');
+
+  // ---- ค่าคอมรายเดือนแยกบัญชี + ต้องจัดการ
+  const mk=M.months.filter(k=>k===M.cur||M.accs.some(a=>a.r.months&&a.r.months[k]));
+  const mRows=M.accs.map(a=>{
+    const cells=mk.map((k,i)=>{
+      const mo=a.r.months&&a.r.months[k];
+      if(!mo)return `<td class="aff-none">—</td>`;
+      let sub='';
+      if(i===0){const old=a.hrs>48;sub=`<span class="sub${old?' bad':''}">${a.end?`ถึง ${a.end} ${TH_MON[+k.slice(5)-1]}`:''}${old?' · ข้อมูลเก่า':''}</span>`;}
+      else if(M.dup[k]&&M.dup[k][a.n])sub=`<span class="sub warn">ตรงกับ ${esc(M.dup[k][a.n])}</span>`;
+      return `<td><span class="${i===0?'aff-comm':''}">${affFmt(affN(mo.comm),1)}</span>${sub}</td>`;
+    }).join('');
+    return `<tr><td><span class="aff-nm">${esc(a.n)}</span><span class="sub">${esc(a.dev.name)}${a.r.slot?` · ช่อง ${a.r.slot}`:''}</span></td>${cells}</tr>`;
+  }).join('');
+  const totCells=mk.map((k,i)=>{
+    let c=0,s=0,o=0,n=0;for(const a of M.accs){const mo=a.r.months&&a.r.months[k];if(mo){n++;c+=affN(mo.comm);s+=affN(mo.sales);o+=affN(mo.orders);}}
+    if(!n)return `<td class="aff-none">ยังไม่ได้ดึง</td>`;
+    return `<td><span class="${i===0?'aff-comm':''}">≈ ${affFmt(c,1)}</span><span class="sub">${i===0?`คาดการณ์ ≈ ${affFmt(Math.round(M.proj/100)*100,1)}`:`ยอดขาย ${affFmt(s,1)} · ${affFmt(o)} ออเดอร์`}</span></td>`;
+  }).join('');
+  const al=affAlerts(M), col={bad:'var(--danger)',warn:'var(--warn)',info:'var(--accent2)'};
+  setHTML(document.getElementById('affMid'),
+    `<div class="aff-card wide"><h4>ค่าคอมรายเดือน · แยกรายบัญชี<span>ยอดย่อจากแอป คลาดได้ ±฿50/บัญชี</span></h4>`+
+      `<div class="aff-scroll"><table class="aff-tbl"><thead><tr><th>บัญชี</th>${mk.map(k=>`<th>${thMonth(k)}</th>`).join('')}</tr></thead>`+
+      `<tbody>${mRows}<tr class="tot"><td>รวม ${M.accs.length} บัญชี</td>${totCells}</tr></tbody></table></div>`+
+      `<div class="foot">ยอดเดือนนี้ของแต่ละบัญชีนับถึงวันที่ไม่เท่ากัน (ตามวันที่อ่านยอดล่าสุด)</div></div>`+
+    `<div class="aff-card side"><h4>ต้องจัดการ<span>${al.length?al.length+' เรื่อง':''}</span></h4>`+
+      (al.length?al.map(x=>`<div class="aff-al"><i style="background:${col[x.c]}"></i><div><b>${esc(x.t)}</b><p>${esc(x.b)}</p></div></div>`).join('')
+        :`<div class="aff-ok-none">ไม่มีเรื่องต้องจัดการ ทุกบัญชีอัปเดตปกติ</div>`)+`</div>`);
+
+  // ---- แยกตามเครื่อง + สินค้าขายดี (สินค้าโชว์เมื่อแอปเริ่มส่งข้อมูลมาแล้วเท่านั้น)
+  const dRows=M.devs.map(g=>{
+    const per=g.dev.posted>0?g.allComm/g.dev.posted:NaN;
+    return `<tr><td><span class="aff-nm"><span class="dot ${g.dev.online?'on':'bad'}"></span>${esc(g.dev.name)}</span>`+
+      `<span class="sub${g.dev.online?'':' bad'}">${g.accs.length} บัญชี · ${g.dev.online?'ออนไลน์':'ไม่ได้ต่อ'}</span></td>`+
+      `<td><span class="aff-comm">${affFmt(g.comm,1)}</span><span class="sub">${affPct(g.comm,M.tot.comm)}</span></td>`+
+      `<td>${g.dev.posted?g.dev.posted.toLocaleString('en-US'):'—'}</td><td>${isNaN(per)?'—':'฿'+per.toFixed(2)}</td></tr>`;
+  }).join('');
+  const prods=Array.isArray(affProducts)&&affProducts.length?affProducts.slice(0,8):null;
+  setHTML(document.getElementById('affDev'),
+    `<div class="aff-card half"><h4>รายได้แยกตามเครื่อง · เดือนนี้</h4>`+
+      `<div class="aff-scroll"><table class="aff-tbl"><thead><tr><th>เครื่อง</th><th>ค่าคอม</th><th>คลิปโพสต์สะสม</th><th>ค่าคอม/คลิป</th></tr></thead><tbody>${dRows}</tbody></table></div>`+
+      `<div class="foot">ค่าคอม/คลิป = ค่าคอมทุกเดือนที่มีข้อมูล ÷ คลิปที่โพสต์สะสม · บอกว่าเครื่องไหนโพสต์แล้วได้เงินจริง</div></div>`+
+    (prods?`<div class="aff-card half"><h4>สินค้าขายดี · เดือนนี้</h4><div class="aff-scroll"><table class="aff-tbl"><thead><tr><th>สินค้า</th><th>ชิ้น</th><th>ค่าคอม</th></tr></thead><tbody>`+
+      prods.map((p,i)=>`<tr><td><span class="aff-nm" style="white-space:normal">${i+1}. ${esc(String(p.name||''))}</span><span class="sub">${esc(String(p.acc||''))}</span></td><td>${affFmt(affN(p.sold))}</td><td class="aff-comm">${affFmt(affN(p.comm),1)}</td></tr>`).join('')+
+      `</tbody></table></div></div>`:''));
+
+  // ---- ตารางรายบัญชี
+  const head=`<tr><th>บัญชี</th><th>ค่าคอมเดือนนี้</th><th class="opt">สัดส่วน</th><th class="opt">คลิก</th><th>ออเดอร์</th><th class="opt">Conv.</th><th class="opt">฿/ออเดอร์</th><th class="opt">วันล่าสุด</th>${narrow?'':'<th>อัปเดต</th>'}</tr>`;
+  const cols=narrow?3:9;
+  const body=M.accs.map(a=>{
+    const {n,r,dev,m}=a, d=a.lastDay?r.days[a.lastDay]:null;
+    const age=a.lastDay?dayDiff(a.lastDay,M.today):null;
+    const ageCls=a.hrs>72?' bad':a.hrs>48?' warn':'';
+    const can=affCanRefresh(dev.live,a.active);
+    const why=!dev.online?'เครื่องออฟไลน์':!a.active?'ไม่ใช่บัญชีที่เปิดอยู่ในเครื่อง — สลับบัญชีก่อน':
+      (dev.live.status&&dev.live.status.running)?'เครื่องกำลังรันงาน — หยุดก่อน':!dev.live.a11y?'Accessibility ปิดอยู่':'ให้เครื่องเข้าไปอ่านยอดใหม่';
+    const upd=`<span class="aff-age${ageCls}">${r.lastAt?affAgo(r.lastAt):'—'}</span>`+
+      (r.err?`<span class="aff-err" title="${esc(r.err.msg)}">อ่านไม่ได้ ${affAgo(r.err.at)}</span>`:'');
+    const btn=`<button class="aff-rf" title="${why}" ${can?'':'disabled'} data-dev="${esc(r.dev)}" onclick="event.stopPropagation();affRefresh(this.dataset.dev)">↻</button>`;
+    const share=M.tot.comm>0?m.comm/M.tot.comm:0;
+    const row=`<tr class="acc-r" data-n="${esc(n)}" onclick="affToggle(this.dataset.n)">`+
+      `<td><span class="aff-nm"><span class="dot${a.active?' on':''}${!dev.online?' bad':''}"></span>${esc(n)}</span><span class="sub">${esc(dev.name)}${r.slot?` · ช่อง ${r.slot}`:''}</span>`+
+      (narrow?`<span class="aff-upd">${upd} ${btn}</span>`:'')+`</td>`+
+      (a.mo?`<td class="aff-comm">${affFmt(m.comm,1)}</td>`+
+        `<td class="opt">${affPct(m.comm,M.tot.comm)}<span class="aff-bar"><i style="width:${Math.round(share*100)}%"></i></span></td>`+
+        `<td class="opt">${affFmt(m.clicks)}</td><td>${affFmt(m.orders)}</td>`+
+        `<td class="opt"${m.clicks>=50&&!m.orders?' style="color:var(--warn)"':''}>${affPct(m.orders,m.clicks)}</td>`+
+        `<td class="opt">${m.orders?affFmt(m.comm/m.orders,1):'—'}</td>`
+        :`<td class="aff-none" colspan="${narrow?2:6}" style="text-align:center">ไม่มียอดเดือนนี้</td>`)+
+      `<td class="opt">${d?`${thDate(a.lastDay)} · <span class="aff-comm">${affFmt(affN(d.comm),1)}</span>`:'<span class="aff-none">—</span>'}${age>3?`<span class="sub bad">${age} วันก่อน</span>`:''}</td>`+
+      (narrow?'':`<td>${upd} ${btn}</td>`)+`</tr>`;
+    return row+(affOpen[n]?`<tr class="aff-hist"><td colspan="${cols}">${affHist(a)}</td></tr>`:'');
+  }).join('');
+  setHTML(document.getElementById('affTbl'),`<thead>${head}</thead><tbody>${body}</tbody>`);
+}
+// กดแถวบัญชี = ยอดรายวันย้อนหลัง (ตัวเลข ไม่ใช่กราฟ) 14 วันล่าสุดที่มีข้อมูล
+function affHist(a){
+  const days=a.days.slice(-14).reverse();
+  if(!days.length)return '<div class="aff-none" style="padding:6px 0">ยังไม่มีประวัติ — เครื่องจะส่งยอดมาเมื่ออ่านได้ครั้งแรก</div>';
+  return `<div class="aff-days">${days.map(k=>{const v=a.r.days[k];return `<div>${thDate(k)}<b>${affFmt(affN(v.comm),1)}</b>${esc(String(v.orders||'0'))} ออเดอร์ · ${esc(String(v.clicks||'0'))} คลิก</div>`;}).join('')}</div>`;
+}
+function affToggle(n){affOpen[n]=!affOpen[n];renderAff();}
+function affRefreshAll(){
+  const M=affModel();let n=0;
+  for(const g of M.devs)if(g.accs.some(a=>affCanRefresh(g.dev.live,a.active))){send({type:'affstats',deviceId:g.dev.id});n++;}
+  affNote(n?'ok':'err',n?`✓ สั่ง ${n} เครื่องอ่านยอดแล้ว — ใช้เวลาราว 1 นาที ตารางจะอัปเดตเอง`:'ไม่มีเครื่องที่ว่างให้อ่านยอดตอนนี้');
+}
+let affNoteT=null;
+function affNote(cls,msg){const el=document.getElementById('affNote');el.className='aff-note '+cls;el.textContent=msg;clearTimeout(affNoteT);affNoteT=setTimeout(()=>{el.className='aff-note';},8000);}
+function affRefresh(id){send({type:'affstats',deviceId:id});}
+function onAffAck(m){
+  const why={offline:'เครื่องออฟไลน์',running:'เครื่องกำลังรันงานอยู่ — หยุดก่อนแล้วค่อยอ่านยอด',a11y:'เครื่องปิด Accessibility อยู่'};
+  const d=devices.find(x=>x.deviceId===m.deviceId);const nm=d?(d.name||d.model):'';
+  if(m.ok)affNote('ok',`✓ สั่ง ${nm} อ่านยอดแล้ว — ใช้เวลาราว 1 นาที ตารางจะอัปเดตเอง`);
+  else affNote('err',why[m.reason]||'สั่งไม่สำเร็จ');
+}
+</script>
+</body>
+</html>

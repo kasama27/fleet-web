@@ -1,0 +1,15 @@
+node_modules/
+.env
+config.json
+data/devices.json
+data/keywords.json
+data/setting-templates.json
+data/template-rotation.json
+data/affstats.json
+tools/
+logs/
+data/tunnel-url.txt
+data/pondy-app.apk
+data/tunnel-token.txt
+
+backups/
