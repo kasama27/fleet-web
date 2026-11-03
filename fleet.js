@@ -139,6 +139,33 @@ function trimKwLib(l) {
 }
 const saveKwLib = (l) => atomicWrite(KWLIB_FILE, JSON.stringify(l, null, 2));
 
+// ---- กล่องคำขอค้นหาสินค้า (Shopee Affiliate) — เพิ่ม 2026-10-24 ----
+// คนกด "ค้นหา" ในแดชบอร์ด → คำขอสถานะ pending. เซิร์ฟเวอร์เองไม่มีบัญชี affiliate (และบัญชีนี้ไม่มีสิทธิ์ Open API) จึงค้นเองไม่ได้:
+// ผู้ค้น (Claude ที่เปิดหน้า affiliate ในเบราว์เซอร์ที่ล็อกอินไว้) อ่าน data/affsearch.json แล้วเขียนผลกลับลงไฟล์เดียวกัน
+// (status 'done' + results[]) — เซิร์ฟเวอร์เช็กไฟล์ทุก 2 วิ ถ้าเปลี่ยนจะโหลดใหม่แล้วกระจายให้ทุกแผง
+const AFFS_FILE = path.join(DATA_DIR, 'data', 'affsearch.json');
+const AFFS_MAX = 30;
+function loadAffs() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(AFFS_FILE, 'utf8'));
+    return (Array.isArray(raw) ? raw : []).slice(0, AFFS_MAX).map((r) => ({
+      id: String(r.id || '').slice(0, 40),
+      q: String(r.q || '').trim().slice(0, 80),
+      at: +r.at || 0,
+      status: ['pending', 'done', 'error'].includes(r.status) ? r.status : 'pending',
+      doneAt: +r.doneAt || 0,
+      note: String(r.note || '').slice(0, 300),
+      results: (Array.isArray(r.results) ? r.results : []).slice(0, 40).map((x) => ({
+        name: String((x && x.name) || '').slice(0, 200),
+        price: String((x && x.price) || '').slice(0, 24),
+        comm: String((x && x.comm) || '').slice(0, 16),
+        sold: String((x && x.sold) || '').slice(0, 24),
+      })).filter((x) => x.name),
+    })).filter((r) => r.id && r.q);
+  } catch { return []; }
+}
+const affsMtime = () => { try { return fs.statSync(AFFS_FILE).mtimeMs; } catch { return 0; } };
+
 const ENROLL_SECRET = process.env.FLEET_SECRET || 'pondy-fleet-2026';
 // เครื่องส่วนตัวที่ไม่ให้ใครสั่งจากแดชบอร์ดถ้าไม่รู้รหัส (ปอนขอ 2026-08-20). เช็คที่ฝั่งเซิร์ฟเวอร์
 // ไม่ใช่แค่ซ่อนปุ่มบนเว็บ — ซ่อนปุ่มอย่างเดียวเปิด devtools ก็ยิงได้ ไม่นับเป็นการล็อก
@@ -948,6 +975,15 @@ function setupFleet(app, server, sessionMw) {
   // คลังคีย์เวิร์ด — ส่งให้ทุกแผงที่เปิดอยู่ทันทีที่มีคนบันทึก/ลบ (ไม่ต้องรีเฟรชหน้า)
   const sendKwLib = (ws) => ws.send(JSON.stringify({ type: 'keywords', list: kwLib }));
   const broadcastKwLib = () => { for (const p of panels) if (p.readyState === 1) sendKwLib(p); };
+  // กล่องคำขอค้นหาสินค้า: ส่งให้ทุกแผงทุกครั้งที่ไฟล์เปลี่ยน (ทั้งตอนมีคนกดค้นหา และตอนผู้ค้นเขียนผลลงไฟล์)
+  let affs = loadAffs(), affsSeen = affsMtime();
+  const sendAffs = (ws) => ws.send(JSON.stringify({ type: 'affsearch', list: affs }));
+  const broadcastAffs = () => { for (const p of panels) if (p.readyState === 1) sendAffs(p); };
+  const saveAffs = () => { atomicWrite(AFFS_FILE, JSON.stringify(affs, null, 2)); affsSeen = affsMtime(); };
+  setInterval(() => {
+    const m = affsMtime();
+    if (m && m !== affsSeen) { affsSeen = m; affs = loadAffs(); broadcastAffs(); console.log('[fleet] affsearch โหลดใหม่จากไฟล์ (' + affs.length + ' รายการ)'); }
+  }, 2000).unref();
 
   // ---- hourly template rotation ----
   const rot = loadRot();
@@ -1001,6 +1037,7 @@ function setupFleet(app, server, sessionMw) {
     sendTemplates(ws);
     sendSelPresets(ws);
     sendKwLib(ws);
+    sendAffs(ws);
     ws.send(affMsg());
     let pinFails = 0;   // ใส่ pin ผิดต่อ socket — เกินกำหนดตัดสาย กันเดา pin
     const pinOk = (p) => {
@@ -1360,6 +1397,20 @@ function setupFleet(app, server, sessionMw) {
           saveKwLib(kwLib); broadcastKwLib();
           console.log('[fleet] kwsave', dev || '(ของกลาง)', `+${added} คำ [${mode}] (คลังรวม ${kwLib.length})`);
         }
+      } else if (m.type === 'affsearch') {
+        // คำขอค้นหา: คำเดียวกันที่ยัง pending อยู่ไม่สร้างซ้ำ; เก็บสูงสุด 30 รายการ (เก่าสุดหลุด)
+        const q = String(m.q || '').split(' ').filter(Boolean).join(' ').slice(0, 80);
+        if (q && !affs.some((r) => r.q === q && r.status === 'pending')) {
+          affs.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), q, at: Date.now(), status: 'pending', doneAt: 0, note: '', results: [] });
+          affs = affs.slice(0, AFFS_MAX);
+          saveAffs(); broadcastAffs();
+          console.log('[fleet] affsearch คำขอใหม่ "' + q + '" (รอผู้ค้น)');
+        }
+      } else if (m.type === 'affsearchdel') {
+        const id = String(m.id || '');
+        const before = affs.length;
+        affs = affs.filter((r) => r.id !== id);
+        if (affs.length !== before) { saveAffs(); broadcastAffs(); }
       } else if (m.type === 'kwskip') {
         // "ข้ามคำนี้" — × ตรงคำที่กำลังรัน (2026-10-14). เส้นทางเดียวกับ "คำหมดสต็อก" เป๊ะ (kwqOnStatus/kwnext):
         // จดว่าทำแล้ว (ไม่ย้อนกลับเข้าคิวตอน "เอาคิวเดิมกลับมา") → สั่งหยุด → พอเครื่องหยุด kwqNext ยิงคำถัดไปให้เอง.

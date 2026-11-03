@@ -369,7 +369,7 @@
       <button class="ghost" id="tkBtn" onclick="setTickerOn(true)" title="เปิดแถบราคา" aria-label="เปิดแถบราคา" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
       </button>
-      <button class="ghost" id="festBtn" type="button" onclick="openFest()" title="คีย์เวิร์ดตามเทศกาลที่กำลังจะมา — บันทึกเข้าคลัง / ต่อคิว">🎉 เทศกาล</button>
+      <button class="ghost" id="festBtn" type="button" onclick="openFest()" title="ค้นหาสินค้า / พิมพ์คีย์เวิร์ดเอง — บันทึกเข้าคลัง / ต่อคิว (คีย์เวิร์ดตามเทศกาลอยู่ด้านล่าง)">🔎 ค้นหา</button>
       <a class="ghost" href="/fleet/logout">ออกระบบ</a>
     </div>
   </header>
@@ -528,6 +528,7 @@ function connect(){
       kwAddNote(m.deviceId, m.ok ? `✓ ลบ ${m.n} คำออกจากคิว` : (why[m.reason]||'ลบไม่สำเร็จ'));
     }
     else if(m.type==='keywords'){kwLib=m.list||[];renderKwLib();}
+    else if(m.type==='affsearch'){window.__affs=m.list||[];if(window.fstAffs)window.fstAffs();}
     else if(m.type==='kwsaveack'){
       const why={empty:'พิมพ์คีย์เวิร์ดก่อน',dup:'บันทึกไว้แล้ว'};
       kwSaveNote(m.deviceId, m.ok?`✓ บันทึก ${m.added} คำ`:(why[m.reason]||'บันทึกไม่สำเร็จ'));
@@ -2138,14 +2139,58 @@ function onAffAck(m){
   .fst-act button:hover:not(:disabled){border-color:var(--accent)}
   .fst-act button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
   .fst-act button:disabled{opacity:.45;cursor:default}
+  .fst-custom{padding:12px 18px 0;display:grid;gap:8px}
+  .fst-custom label{font-size:13.5px;font-weight:600}
+  .fst-custom label small{font-weight:400;color:var(--muted);margin-left:6px}
+  .fst-custom textarea{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font:inherit;font-size:14px;resize:vertical;min-height:54px;width:100%;box-sizing:border-box}
+  .fst-custom textarea:focus{outline:none;border-color:var(--accent)}
+  .fst-custom .fst-chips{min-height:0}
+  .fst-qrow{display:flex;gap:8px}
+  .fst-qrow input{flex:1;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font:inherit}
+  .fst-qrow input:focus{outline:none;border-color:var(--accent)}
+  .fst-qrow button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:var(--r);padding:6px 14px;cursor:pointer;font:inherit}
+  .fst-qrow button:disabled{opacity:.45;cursor:default}
+  .fst-affs{display:grid;gap:10px}
+  .fst-req{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:8px}
+  .fst-req-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .fst-req-h b{font-size:14.5px}
+  .fst-st{font-size:12px;padding:1px 9px;border-radius:99px;border:1px solid var(--line2);color:var(--muted)}
+  .fst-st.done{color:var(--ok);border-color:var(--ok)} .fst-st.error{color:var(--warn);border-color:var(--warn)}
+  .fst-req-h .sp{flex:1}
+  .fst-req-h button{border:1px solid var(--line2);background:transparent;color:var(--text);border-radius:var(--r);padding:2px 9px;cursor:pointer;font:inherit;font-size:12px}
+  .fst-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .fst-tbl th,.fst-tbl td{text-align:left;padding:4px 6px;border-top:1px solid var(--line)}
+  .fst-tbl th{color:var(--muted);font-weight:500}
+  .fst-tbl td.n{white-space:nowrap}
+  .fst-fest{margin:12px 18px 0;border-top:1px solid var(--line);padding-top:10px}
+  .fst-fest>summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
+  .fst-fest .fst-body{padding:10px 0 18px}
 </style>
 <dialog class="fstdlg" id="festDlg" aria-labelledby="fstH">
   <div class="fst-top">
-    <div class="fst-title"><h3 id="fstH">🎉 คีย์เวิร์ดตามเทศกาลที่กำลังจะมา</h3><button class="fst-x" type="button" onclick="document.getElementById('festDlg').close()">ปิด</button></div>
+    <div class="fst-title"><h3 id="fstH">🔎 ค้นหาสินค้า / คีย์เวิร์ด</h3><button class="fst-x" type="button" onclick="document.getElementById('festDlg').close()">ปิด</button></div>
     <div class="fst-sel"><label for="fstDev">ใส่ให้เครื่อง</label><select id="fstDev"></select><span class="fst-quota" id="fstQuota"></span></div>
     <div class="fst-msg" id="fstMsg" role="status" aria-live="polite"></div>
   </div>
-  <div class="fst-body" id="fstBody"></div>
+  <!-- ค้นหาสินค้าใน Shopee Affiliate (เพิ่ม 2026-10-24): กดค้นหา = สร้างคำขอ → ผู้ค้น (Claude ในแชต) ค้นแล้วเขียนผลกลับ (ดู fleet.js AFFS_FILE)
+       อยู่นอก #fstBody/#fstAffs ที่ถูกวาดใหม่ เพื่อให้ช่องพิมพ์ไม่โดนล้างระหว่างพิมพ์ -->
+  <div class="fst-custom fst-search">
+    <label for="fstQ">🔎 ค้นหาสินค้า<small>พิมพ์คำแล้วกดค้นหา · ผลจากแท็บ “สินค้าขายดี” ใน Shopee Affiliate</small></label>
+    <div class="fst-qrow"><input id="fstQ" maxlength="80" placeholder="เช่น ปลั๊กไฟ, เจลกำจัดมด" autocomplete="off" spellcheck="false"><button type="button" class="pri" id="fstQGo" disabled>🔎 ค้นหา</button></div>
+    <div class="fst-msg" id="fstQMsg" role="status"></div>
+    <div id="fstAffs" class="fst-affs"></div>
+  </div>
+  <!-- พิมพ์คำค้นเอง: อยู่นอก #fstBody เพราะ fstBody ถูกวาดใหม่ทุก 3 วินาที — ช่องพิมพ์ในนั้นจะโดนล้างระหว่างพิมพ์ -->
+  <div class="fst-custom">
+    <label for="fstCustom">✏️ พิมพ์คำค้นเอง<small>หลายคำให้ขึ้นบรรทัดใหม่ หรือคั่นด้วย , (ไม่ต้องรอเทศกาล)</small></label>
+    <textarea id="fstCustom" rows="2" maxlength="2000" placeholder="เช่น เครื่องทำน้ำอุ่น, ผ้าห่มขนแกะ" spellcheck="false"></textarea>
+    <div class="fst-chips" id="fstCustomChips"></div>
+    <div class="fst-act">
+      <button type="button" class="pri" id="fstCustomSave" disabled>☆ บันทึกเข้าคลัง (0)</button>
+      <button type="button" id="fstCustomQueue" disabled>＋ ต่อคิว (0)</button>
+    </div>
+  </div>
+  <details class="fst-fest"><summary>🎉 คีย์เวิร์ดตามเทศกาลที่กำลังจะมา</summary><div class="fst-body" id="fstBody"></div></details>
 </dialog>
 <script>
 (function(){
@@ -2179,6 +2224,64 @@ function onAffAck(m){
     const say=(t,ok)=>{msg.textContent=t||'';msg.className='fst-msg'+(ok?' ok':'');};
     const fmtD=s=>new Date(s+'T00:00:00').toLocaleDateString('th-TH',{dateStyle:'medium'});
 
+    // ── พิมพ์คำค้นเอง ── แยกคำด้วยขึ้นบรรทัดใหม่/ , / ; ตัดซ้ำ จำกัดคำละ ≤80 ตัวอักษร ≤30 คำ แล้วส่งผ่าน kwsave/kwadd เส้นทางเดียวกับปุ่มเทศกาล
+    const cust=document.getElementById('fstCustom'), custChips=document.getElementById('fstCustomChips'),
+          custSave=document.getElementById('fstCustomSave'), custQueue=document.getElementById('fstCustomQueue');
+    const customWords=()=>{
+      const seen=new Set(), out=[];
+      for(const raw of cust.value.split(/[\n,;，]+/)){
+        const w=raw.replace(/\s+/g,' ').trim().slice(0,80);
+        if(w&&!seen.has(w)){seen.add(w);out.push(w);}
+        if(out.length>=30)break;
+      }
+      return out;
+    };
+    const updCustom=()=>{
+      const ws_=customWords(), fresh=ws_.filter(w=>!inLib(w)), notQ=ws_.filter(w=>!inQueue(w));
+      custChips.innerHTML=ws_.map(w=>{const l=inLib(w),q=inQueue(w);return `<span class="fst-chip ${l||q?'have':'new'}">${esc(w)}${q?'<small>✓ ในคิว</small>':(l?'<small>✓ ในคลัง</small>':'')}</span>`;}).join('');
+      custSave.textContent=`☆ บันทึกเข้าคลัง (${target?fresh.length:0})`; custSave.disabled=!(target&&fresh.length);
+      custQueue.textContent=`＋ ต่อคิว (${target?notQ.length:0})`; custQueue.disabled=!(target&&notQ.length);
+    };
+    const sendCustom=act=>{
+      const ws_=customWords().filter(w=>act==='save'?!inLib(w):!inQueue(w));
+      if(!target||!ws_.length)return;
+      say('กำลังส่ง…');
+      send({type:act==='save'?'kwsave':'kwadd',deviceId:target,keywords:ws_,searchMode:'PRODUCT'});
+    };
+    // ── ค้นหาสินค้า (คำขอ → ผู้ค้นเขียนผลกลับ) ──
+    const qIn=document.getElementById('fstQ'), qGo=document.getElementById('fstQGo'), qMsg=document.getElementById('fstQMsg'), affBox=document.getElementById('fstAffs');
+    const stTh={pending:'⏳ รอผู้ค้น',done:'✓ ผลพร้อม',error:'ผิดพลาด'};
+    const fmtT=t=>t?new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
+    const renderAffs=()=>{
+      const list=window.__affs||[];
+      const html=list.length?list.map(r=>{
+        const rows=(r.results||[]).map(x=>`<tr><td>${esc(x.name)}</td><td class="n">${esc(x.price)}</td><td class="n">${esc(x.comm)}</td><td class="n">${esc(x.sold)}</td></tr>`).join('');
+        const body=r.status==='pending'?'<p class="fst-note">ยังไม่มีผล — บอก Claude ในแชตว่า “ค้นคำที่รออยู่ให้หน่อย” แล้วผลจะขึ้นที่นี่เอง</p>'
+          :(rows?`<table class="fst-tbl"><tr><th>สินค้า</th><th>ราคา</th><th>ค่าคอม</th><th>ขายได้</th></tr>${rows}</table>`:'<p class="fst-note">ไม่พบสินค้า</p>')+(r.note?`<p class="fst-note">${esc(r.note)}</p>`:'');
+        return `<div class="fst-req"><div class="fst-req-h"><b>${esc(r.q)}</b><span class="fst-st ${esc(r.status)}">${stTh[r.status]||''}</span><span class="fst-date">${fmtT(r.status==='pending'?r.at:(r.doneAt||r.at))}</span><span class="sp"></span>`+
+          `<button type="button" data-aff="save" data-id="${esc(r.id)}"${target?'':' disabled'}>☆ บันทึกคำนี้</button><button type="button" data-aff="del" data-id="${esc(r.id)}" title="ลบคำขอนี้">✕</button></div>${body}</div>`;
+      }).join(''):'<p class="fst-note">ยังไม่มีคำขอ — พิมพ์คำแล้วกดค้นหา</p>';
+      setHTML(affBox,html);
+    };
+    window.fstAffs=renderAffs;
+    const updQ=()=>{qGo.disabled=!qIn.value.trim();};
+    const goQ=()=>{
+      const q=qIn.value.split(' ').filter(Boolean).join(' ').slice(0,80); if(!q)return;
+      send({type:'affsearch',q}); qIn.value=''; updQ(); qMsg.textContent='✓ ส่งคำขอ “'+q+'” แล้ว — รอผู้ค้น'; qMsg.className='fst-msg ok';
+    };
+    qIn.addEventListener('input',updQ);
+    qIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goQ();}});
+    qGo.addEventListener('click',goQ);
+    affBox.addEventListener('click',e=>{
+      const b=e.target.closest('button[data-aff]'); if(!b||b.disabled)return;
+      const r=(window.__affs||[]).find(x=>x.id===b.dataset.id); if(!r)return;
+      if(b.dataset.aff==='del'){send({type:'affsearchdel',id:r.id});return;}
+      if(target){say('กำลังส่ง…');send({type:'kwsave',deviceId:target,keywords:[r.q],searchMode:'PRODUCT'});}
+    });
+    cust.addEventListener('input',updCustom);
+    custSave.addEventListener('click',()=>sendCustom('save'));
+    custQueue.addEventListener('click',()=>sendCustom('queue'));
+
     function devOptions(){
       const html=devices.length
         ? devices.map(d=>`<option value="${esc(d.deviceId)}"${d.deviceId===target?' selected':''}>${esc(d.name||d.model||d.deviceId)}${d.online?'':' (ออฟไลน์)'}</option>`).join('')
@@ -2192,6 +2295,7 @@ function onAffAck(m){
       sel.value=target;
       const mine=kwLib.filter(it=>(it.dev||'')===target).length;
       quota.textContent=target?`คลังของเครื่องนี้ ${mine}/50 คำ (เต็มแล้วคำเก่าสุดหลุดออก)`:'';
+      updCustom();
       const list=upcoming();
       const html=`<p class="fst-note">คำค้นสินค้าที่คนไทยมักซื้อช่วงเทศกาล — เก็บสินค้ามาลงคลิปก่อนถึงงาน · <b>☆ บันทึกเข้าคลัง</b> = เก็บไว้ในคลังคีย์เวิร์ดของเครื่องที่เลือก (กดใช้ทีหลังได้) · <b>＋ ต่อคิว</b> = ต่อท้ายคิวของเครื่องที่กำลังรันอยู่ · วันของออกพรรษา/ลอยกระทง/ลมหนาวเป็นวันโดยประมาณ ตรวจกับปฏิทินอีกที</p>`+
         list.map(f=>{
@@ -2232,7 +2336,7 @@ function onAffAck(m){
     wrap('kwAddNote',(id,m)=>{if(dlg.open&&id===target)say('คิว: '+m,/^✓/.test(m));});
     wrap('renderKwLib',()=>render());
     setInterval(()=>{if(dlg.open)render();},3000);   // สถานะเครื่อง/คิวเปลี่ยนเอง (setHTML ข้ามถ้าเหมือนเดิม)
-    window.openFest=function(){say('');render();dlg.showModal();render();};
+    window.openFest=function(){say('');render();renderAffs();dlg.showModal();render();renderAffs();};
   }catch(err){
     console.error('fest panel init failed',err);
     window.openFest=function(){alert('แผงเทศกาลโหลดไม่สำเร็จ — ดู console');};
